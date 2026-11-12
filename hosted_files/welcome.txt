@@ -1,0 +1,2 @@
+Welcome to SHTTPS Local Server hosted via Omni-Deck!
+Offline-first modular utilities suite.

@@ -1,0 +1,420 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #080a0f;
+    color: #e2e8f0;
+    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  body.light-theme {
+    background-color: #f1f3f6;
+    color: #0f172a;
+  }
+
+  /* Custom Pixel & Mono Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0d1117;
+    border-left: 1px solid #21262d;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border: 1px solid #00ff88;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00ff88;
+  }
+
+  body.light-theme ::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-left: 1px solid #cbd5e1;
+  }
+  body.light-theme ::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border: 1px solid #000000;
+  }
+  body.light-theme ::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+  }
+}
+
+/* Scanlines overlay effect */
+.scanlines-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 255, 0, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+}
+
+body.light-theme .scanlines-overlay {
+  opacity: 0.2;
+  background: linear-gradient(
+    rgba(255, 255, 255, 0) 50%, 
+    rgba(0, 0, 0, 0.08) 50%
+  );
+  background-size: 100% 3px;
+}
+
+/* Pixel tactile button styling */
+.btn-pixel {
+  position: relative;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+  transition: all 0.08s ease;
+  user-select: none;
+}
+.btn-pixel:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.btn-pixel-emerald {
+  background-color: #00ff88;
+  color: #06080b;
+  font-weight: 700;
+  border-color: #000;
+}
+.btn-pixel-emerald:hover {
+  background-color: #10b981;
+}
+
+.btn-pixel-amber {
+  background-color: #ffb703;
+  color: #06080b;
+  font-weight: 700;
+  border-color: #000;
+}
+.btn-pixel-amber:hover {
+  background-color: #fbbf24;
+}
+
+.btn-pixel-coral {
+  background-color: #ff4757;
+  color: #ffffff;
+  font-weight: 700;
+  border-color: #000;
+}
+.btn-pixel-coral:hover {
+  background-color: #ee3848;
+}
+
+.btn-pixel-cyan {
+  background-color: #00f0ff;
+  color: #06080b;
+  font-weight: 700;
+  border-color: #000;
+}
+.btn-pixel-cyan:hover {
+  background-color: #38bdf8;
+}
+
+.btn-pixel-violet {
+  background-color: #a78bfa;
+  color: #06080b;
+  font-weight: 700;
+  border-color: #000;
+}
+.btn-pixel-violet:hover {
+  background-color: #c4b5fd;
+}
+
+.btn-pixel-surface {
+  background-color: #161e29;
+  color: #e2e8f0;
+  border-color: #2b3544;
+}
+.btn-pixel-surface:hover {
+  background-color: #1e293b;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+/* Pixel Card Chassis */
+.pixel-card {
+  background-color: #10151d;
+  border: 2px solid #232c3a;
+  box-shadow: 4px 4px 0px #000000;
+  position: relative;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.pixel-card-header {
+  border-bottom: 2px solid #232c3a;
+  background-color: #151c27;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* CRT glowing text */
+.text-glow-emerald {
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+}
+.text-glow-amber {
+  text-shadow: 0 0 8px rgba(255, 183, 3, 0.4);
+}
+.text-glow-coral {
+  text-shadow: 0 0 8px rgba(255, 71, 87, 0.4);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+/* CRT monitor curve border simulation */
+.deck-viewport {
+  border: 3px solid #232c3a;
+  background-color: #0a0d12;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 6px 6px 0px #000000;
+}
+
+/* ==============================================================
+   COMPREHENSIVE PIXEL-MODERN LIGHT THEME SPECIFICATION
+   ============================================================== */
+
+body.light-theme {
+  background-color: #f0f2f6;
+  color: #0f172a;
+}
+
+body.light-theme .text-glow-emerald,
+body.light-theme .text-glow-amber,
+body.light-theme .text-glow-coral,
+body.light-theme .text-glow-cyan {
+  text-shadow: none;
+}
+
+/* 1. Header & Micro Ticker */
+body.light-theme header {
+  background-color: #ffffff !important;
+  border-bottom: 2px solid #000000 !important;
+}
+
+body.light-theme header > div:first-child {
+  background-color: #e9ecef !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+body.light-theme header span.text-white {
+  color: #000000 !important;
+}
+
+body.light-theme header button {
+  border-color: #000000 !important;
+}
+
+/* 2. Navigation Category Bar */
+body.light-theme nav {
+  background-color: #e2e8f0 !important;
+  border-bottom: 2px solid #000000 !important;
+}
+
+body.light-theme nav button {
+  background-color: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  color: #0f172a !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+body.light-theme nav button:hover {
+  background-color: #f8fafc !important;
+}
+
+body.light-theme nav button.active-nav-pill,
+body.light-theme nav button.bg-deck-surfaceHover {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+body.light-theme nav button.active-nav-pill span,
+body.light-theme nav button.bg-deck-surfaceHover span {
+  color: #ffffff !important;
+}
+
+body.light-theme nav button .badge-pill {
+  background-color: #f1f5f9 !important;
+  border-color: #000000 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme nav button.active-nav-pill .badge-pill,
+body.light-theme nav button.bg-deck-surfaceHover .badge-pill {
+  background-color: #ffb703 !important;
+  border-color: #000000 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* 3. Cards & Viewports */
+body.light-theme .pixel-card {
+  background-color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 4px 4px 0px #000000 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme .pixel-card-header {
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #000000 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme .deck-viewport {
+  border-color: #000000 !important;
+  background-color: #f8fafc !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.04), 5px 5px 0px #000000 !important;
+}
+
+/* 4. Deck Color Opacity Overrides */
+body.light-theme [class*="bg-deck-bg"] {
+  background-color: #f8fafc !important;
+  color: #0f172a;
+}
+body.light-theme [class*="bg-deck-dark"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a;
+}
+body.light-theme [class*="bg-deck-surface"] {
+  background-color: #ffffff !important;
+  color: #0f172a;
+}
+body.light-theme [class*="bg-deck-surfaceHover"] {
+  background-color: #e2e8f0 !important;
+}
+
+body.light-theme [class*="border-deck-"] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Opacity dark backgrounds */
+body.light-theme .bg-black\/20,
+body.light-theme .bg-black\/30,
+body.light-theme .bg-black\/40,
+body.light-theme .bg-black\/50,
+body.light-theme .bg-black\/60,
+body.light-theme .bg-black\/70,
+body.light-theme .bg-black\/80 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* 5. High-Contrast Text Colors on White / Paper */
+body.light-theme .text-arcade-emerald {
+  color: #047857 !important; /* Bold rich emerald */
+}
+body.light-theme .text-arcade-green {
+  color: #047857 !important;
+}
+body.light-theme .text-arcade-amber {
+  color: #b45309 !important; /* Bold bronze/amber-700 */
+}
+body.light-theme .text-arcade-cyan {
+  color: #0284c7 !important; /* Deep sky-600 */
+}
+body.light-theme .text-arcade-coral {
+  color: #be123c !important; /* Rich rose-700 */
+}
+body.light-theme .text-arcade-violet {
+  color: #6d28d9 !important; /* Rich violet-700 */
+}
+body.light-theme .text-arcade-muted {
+  color: #475569 !important; /* Crisp slate-600 */
+}
+
+body.light-theme .text-white {
+  color: #0f172a !important;
+}
+body.light-theme .text-slate-100,
+body.light-theme .text-slate-200,
+body.light-theme .text-slate-300,
+body.light-theme .text-arcade-paper {
+  color: #1e293b !important;
+}
+body.light-theme .text-slate-400,
+body.light-theme .text-slate-500 {
+  color: #475569 !important;
+}
+
+/* 6. Form Controls */
+body.light-theme input[type="text"],
+body.light-theme input[type="number"],
+body.light-theme input[type="password"],
+body.light-theme input[type="search"],
+body.light-theme input[type="date"],
+body.light-theme input[type="datetime-local"],
+body.light-theme textarea,
+body.light-theme select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+}
+
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 7. Button Styles in Light Theme */
+body.light-theme .btn-pixel-surface {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #000000 !important;
+}
+body.light-theme .btn-pixel-surface:hover {
+  background-color: #f1f5f9 !important;
+  color: #047857 !important;
+}
+
+body.light-theme .btn-pixel-emerald {
+  background-color: #10b981 !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+body.light-theme .btn-pixel-amber {
+  background-color: #ffb703 !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+body.light-theme .btn-pixel-cyan {
+  background-color: #38bdf8 !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+body.light-theme .btn-pixel-coral {
+  background-color: #fb7185 !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+/* 8. Modals & Footer */
+body.light-theme footer {
+  background-color: #e2e8f0 !important;
+  border-top: 2px solid #000000 !important;
+  color: #0f172a !important;
+}

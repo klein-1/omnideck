@@ -1,0 +1,45 @@
+{
+  "name": "omnitools-suite",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "The Ultimate Pixel-Modern Utility & Downloader Suite - Made by Hatim Mushtaq",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "postinstall": "node scripts/patch-rollup.js",
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "selfsigned": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "canvas-confetti": "^1.9.4",
+    "chart.js": "^4.4.7",
+    "crypto-js": "^4.2.0",
+    "diff": "^7.0.0",
+    "jspdf": "^2.5.2",
+    "lucide-react": "^0.475.0",
+    "pdf-lib": "^1.17.1",
+    "postcss": "^8.5.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.1.0"
+  },
+  "optionalDependencies": {
+    "@rollup/wasm-node": "^4.68.2"
+  }
+}
