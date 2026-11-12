@@ -174,18 +174,28 @@ export default function MeasurementTools() {
   const [angle, setAngle] = useState(45);
   const protractorRef = useRef(null);
 
-  const handleProtractorMove = (e) => {
+  const calculateProtractorAngle = (clientX, clientY) => {
     if (!protractorRef.current) return;
     const rect = protractorRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.bottom;
-    const dx = e.clientX - centerX;
-    const dy = centerY - e.clientY;
+    const dx = clientX - centerX;
+    const dy = centerY - clientY;
     let rad = Math.atan2(dy, dx);
     let deg = Math.round((rad * 180) / Math.PI);
     if (deg < 0) deg = 0;
     if (deg > 180) deg = 180;
     setAngle(deg);
+  };
+
+  const handleProtractorMove = (e) => {
+    calculateProtractorAngle(e.clientX, e.clientY);
+  };
+
+  const handleProtractorTouch = (e) => {
+    if (e.touches && e.touches[0]) {
+      calculateProtractorAngle(e.touches[0].clientX, e.touches[0].clientY);
+    }
   };
 
   // 4. SPIRIT LEVEL
@@ -409,21 +419,21 @@ export default function MeasurementTools() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-deck-border text-center">
-              <div>
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 pt-2 border-t border-deck-border text-center">
+              <div className="p-2 bg-deck-surface/40 border border-deck-border">
                 <span className="text-arcade-muted text-[9px] block">PING / JITTER</span>
                 <strong className="text-arcade-amber font-pixel text-xs">
                   {speedPing !== null ? `${speedPing} ms` : '--'}
                   {speedJitter !== null ? ` (±${speedJitter})` : ''}
                 </strong>
               </div>
-              <div>
+              <div className="p-2 bg-deck-surface/40 border border-deck-border">
                 <span className="text-arcade-muted text-[9px] block">UPLOAD SPEED</span>
                 <strong className="text-arcade-cyan font-pixel text-xs">
                   {uploadSpeed > 0 ? `${uploadSpeed} Mbps` : '--'}
                 </strong>
               </div>
-              <div>
+              <div className="p-2 bg-deck-surface/40 border border-deck-border">
                 <span className="text-arcade-muted text-[9px] block">DATA MOVED</span>
                 <strong className="text-arcade-emerald font-pixel text-xs">
                   {totalTransferredMB > 0 ? `${totalTransferredMB} MB` : '--'}
@@ -509,7 +519,9 @@ export default function MeasurementTools() {
           <div
             ref={protractorRef}
             onMouseMove={handleProtractorMove}
-            className="relative w-72 h-36 border-t-4 border-l-4 border-r-4 border-black rounded-t-full bg-deck-bg mx-auto cursor-pointer shadow-pixel"
+            onTouchMove={handleProtractorTouch}
+            onTouchStart={handleProtractorTouch}
+            className="relative w-64 sm:w-72 h-32 sm:h-36 max-w-full border-t-4 border-l-4 border-r-4 border-black rounded-t-full bg-deck-bg mx-auto cursor-pointer shadow-pixel touch-none select-none"
           >
             <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-white -translate-x-1/2 translate-y-1/2 rounded-full border border-black"></div>
             <div

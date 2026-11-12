@@ -296,54 +296,54 @@ export default function CalculatorTools() {
 
       {/* 1. SCIENTIFIC CALCULATOR */}
       {activeTab === 'scientific' && (
-        <div className="max-w-2xl mx-auto pixel-card bg-deck-dark p-6 space-y-4 border border-deck-border">
-          <div className="p-4 bg-deck-bg border-2 border-black space-y-1">
+        <div className="max-w-2xl mx-auto pixel-card bg-deck-dark p-3 sm:p-6 space-y-3 sm:space-y-4 border border-deck-border w-full">
+          <div className="p-3 sm:p-4 bg-deck-bg border-2 border-black space-y-1">
             <div className="text-[10px] text-arcade-muted font-mono flex justify-between">
               <span>{isRad ? 'RAD' : 'DEG'} • SCIENTIFIC MATRIX</span>
-              <span>{calcHistory[0] || ''}</span>
+              <span className="truncate max-w-[120px]">{calcHistory[0] || ''}</span>
             </div>
-            <div className="font-pixel text-2xl sm:text-3xl text-arcade-amber text-right truncate text-glow-amber">
+            <div className="font-pixel text-xl sm:text-2xl md:text-3xl text-arcade-amber text-right truncate text-glow-amber">
               {calcDisplay}
             </div>
           </div>
 
-          <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 font-mono font-bold text-xs">
-            <button onClick={() => setIsRad(!isRad)} className="p-2.5 bg-deck-surface border border-deck-border text-arcade-cyan font-pixel text-[8px]">
+          <div className="grid grid-cols-6 gap-1 sm:gap-2 font-mono font-bold text-xs">
+            <button onClick={() => setIsRad(!isRad)} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-arcade-cyan font-pixel text-[7px] sm:text-[8px] flex items-center justify-center">
               {isRad ? 'RAD' : 'DEG'}
             </button>
-            <button onClick={() => handleCalcInput('sin(')} className="p-2.5 bg-deck-surface border border-deck-border">sin</button>
-            <button onClick={() => handleCalcInput('cos(')} className="p-2.5 bg-deck-surface border border-deck-border">cos</button>
-            <button onClick={() => handleCalcInput('tan(')} className="p-2.5 bg-deck-surface border border-deck-border">tan</button>
-            <button onClick={() => handleCalcInput('C')} className="p-2.5 bg-red-950/20 border border-arcade-coral text-arcade-coral font-bold">C</button>
-            <button onClick={() => handleCalcInput('DEL')} className="p-2.5 bg-deck-surface border border-deck-border text-arcade-coral">DEL</button>
+            <button onClick={() => handleCalcInput('sin(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">sin</button>
+            <button onClick={() => handleCalcInput('cos(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">cos</button>
+            <button onClick={() => handleCalcInput('tan(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">tan</button>
+            <button onClick={() => handleCalcInput('C')} className="p-1.5 sm:p-2.5 bg-red-950/20 border border-arcade-coral text-arcade-coral font-bold text-[11px] sm:text-xs">C</button>
+            <button onClick={() => handleCalcInput('DEL')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-arcade-coral text-[10px] sm:text-xs">DEL</button>
 
-            <button onClick={() => handleCalcInput('ln(')} className="p-2.5 bg-deck-surface border border-deck-border">ln</button>
-            <button onClick={() => handleCalcInput('log(')} className="p-2.5 bg-deck-surface border border-deck-border">log</button>
-            <button onClick={() => handleCalcInput('sqrt(')} className="p-2.5 bg-deck-surface border border-deck-border">√</button>
-            <button onClick={() => handleCalcInput('(')} className="p-2.5 bg-deck-surface border border-deck-border">(</button>
-            <button onClick={() => handleCalcInput(')')} className="p-2.5 bg-deck-surface border border-deck-border">)</button>
-            <button onClick={() => handleCalcInput('÷')} className="p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-sm">÷</button>
+            <button onClick={() => handleCalcInput('ln(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">ln</button>
+            <button onClick={() => handleCalcInput('log(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">log</button>
+            <button onClick={() => handleCalcInput('sqrt(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">√</button>
+            <button onClick={() => handleCalcInput('(')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">(</button>
+            <button onClick={() => handleCalcInput(')')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">)</button>
+            <button onClick={() => handleCalcInput('÷')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-xs sm:text-sm">÷</button>
 
-            <button onClick={() => handleCalcInput('π')} className="p-2.5 bg-deck-surface border border-deck-border text-arcade-emerald">π</button>
-            <button onClick={() => handleCalcInput('7')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">7</button>
-            <button onClick={() => handleCalcInput('8')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">8</button>
-            <button onClick={() => handleCalcInput('9')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">9</button>
-            <button onClick={() => handleCalcInput('×')} className="p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-sm">×</button>
-            <button onClick={() => handleCalcInput('e')} className="p-2.5 bg-deck-surface border border-deck-border text-arcade-emerald">e</button>
+            <button onClick={() => handleCalcInput('π')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-arcade-emerald text-[11px] sm:text-xs">π</button>
+            <button onClick={() => handleCalcInput('7')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">7</button>
+            <button onClick={() => handleCalcInput('8')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">8</button>
+            <button onClick={() => handleCalcInput('9')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">9</button>
+            <button onClick={() => handleCalcInput('×')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-xs sm:text-sm">×</button>
+            <button onClick={() => handleCalcInput('e')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-arcade-emerald text-[11px] sm:text-xs">e</button>
 
-            <button onClick={() => handleCalcInput('**')} className="p-2.5 bg-deck-surface border border-deck-border">xʸ</button>
-            <button onClick={() => handleCalcInput('4')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">4</button>
-            <button onClick={() => handleCalcInput('5')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">5</button>
-            <button onClick={() => handleCalcInput('6')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">6</button>
-            <button onClick={() => handleCalcInput('-')} className="p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-sm">-</button>
-            <button onClick={() => handleCalcInput('%')} className="p-2.5 bg-deck-surface border border-deck-border">%</button>
+            <button onClick={() => handleCalcInput('**')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">xʸ</button>
+            <button onClick={() => handleCalcInput('4')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">4</button>
+            <button onClick={() => handleCalcInput('5')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">5</button>
+            <button onClick={() => handleCalcInput('6')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">6</button>
+            <button onClick={() => handleCalcInput('-')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-xs sm:text-sm">-</button>
+            <button onClick={() => handleCalcInput('%')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">%</button>
 
-            <button onClick={() => handleCalcInput('.')} className="p-2.5 bg-deck-surface border border-deck-border">.</button>
-            <button onClick={() => handleCalcInput('1')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">1</button>
-            <button onClick={() => handleCalcInput('2')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">2</button>
-            <button onClick={() => handleCalcInput('3')} className="p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-sm">3</button>
-            <button onClick={() => handleCalcInput('+')} className="p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-sm">+</button>
-            <button onClick={() => handleCalcInput('=')} className="p-2.5 bg-arcade-emerald text-black font-pixel text-xs border border-black shadow-pixel-sm">=</button>
+            <button onClick={() => handleCalcInput('.')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-deck-border text-[11px] sm:text-xs">.</button>
+            <button onClick={() => handleCalcInput('1')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">1</button>
+            <button onClick={() => handleCalcInput('2')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">2</button>
+            <button onClick={() => handleCalcInput('3')} className="p-2 sm:p-3 bg-deck-bg border border-deck-border hover:bg-deck-surface text-xs sm:text-sm">3</button>
+            <button onClick={() => handleCalcInput('+')} className="p-1.5 sm:p-2.5 bg-deck-surface border border-arcade-amber text-arcade-amber text-xs sm:text-sm">+</button>
+            <button onClick={() => handleCalcInput('=')} className="p-1.5 sm:p-2.5 bg-arcade-emerald text-black font-pixel text-[10px] sm:text-xs border border-black shadow-pixel-sm">=</button>
           </div>
         </div>
       )}

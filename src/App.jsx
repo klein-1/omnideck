@@ -102,6 +102,7 @@ export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('omnideck_theme') || 'dark');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
+  const [viewportSimulation, setViewportSimulation] = useState('full'); // 'full' | 'mobile' | 'tablet'
 
   // Sync theme with body element & localStorage
   useEffect(() => {
@@ -151,6 +152,8 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCredits={() => setIsCreditsOpen(true)}
         activeCategory={activeCategory}
+        viewportSimulation={viewportSimulation}
+        setViewportSimulation={setViewportSimulation}
       />
 
       {/* Category Pills Navigation */}
@@ -160,7 +163,9 @@ export default function App() {
       />
 
       {/* Dynamic Content Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 md:p-6 space-y-4 sm:space-y-6 transition-all duration-300 ${
+        viewportSimulation === 'mobile' ? 'viewport-simulate-mobile' : viewportSimulation === 'tablet' ? 'viewport-simulate-tablet' : ''
+      }`}>
         {/* 1. UNIVERSAL DOWNLOADER */}
         {activeCategory === 'downloader' && (
           <ToolWrapper

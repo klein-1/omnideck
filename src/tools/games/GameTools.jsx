@@ -332,17 +332,36 @@ export default function GameTools() {
 
       {/* 1. RETRO SNAKE */}
       {activeTab === 'snake' && (
-        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-4 border border-deck-border font-mono text-xs text-center">
+        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-3 sm:p-6 space-y-3 sm:space-y-4 border border-deck-border font-mono text-xs text-center w-full">
           <div className="flex items-center justify-between border-b border-deck-border pb-2">
-            <span className="font-pixel text-xs text-arcade-emerald">RETRO 8-BIT SNAKE</span>
-            <span className="font-pixel text-sm text-arcade-amber">SCORE: {snakeScore}</span>
+            <span className="font-pixel text-[10px] sm:text-xs text-arcade-emerald">RETRO 8-BIT SNAKE</span>
+            <span className="font-pixel text-xs sm:text-sm text-arcade-amber">SCORE: {snakeScore}</span>
           </div>
 
-          <div className="relative deck-viewport inline-block mx-auto">
-            <canvas ref={snakeCanvasRef} width={320} height={320} className="block" />
+          <div 
+            className="relative deck-viewport inline-block mx-auto max-w-full overflow-hidden touch-none"
+            onTouchStart={(e) => {
+              const touch = e.touches[0];
+              snakeRef.touchStartX = touch.clientX;
+              snakeRef.touchStartY = touch.clientY;
+            }}
+            onTouchEnd={(e) => {
+              if (!snakeRef.touchStartX || !snakeRef.touchStartY) return;
+              const dx = e.changedTouches[0].clientX - snakeRef.touchStartX;
+              const dy = e.changedTouches[0].clientY - snakeRef.touchStartY;
+              if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 25 && dirRef.current[0] === 0) dirRef.current = [1, 0];
+                else if (dx < -25 && dirRef.current[0] === 0) dirRef.current = [-1, 0];
+              } else {
+                if (dy > 25 && dirRef.current[1] === 0) dirRef.current = [0, 1];
+                else if (dy < -25 && dirRef.current[1] === 0) dirRef.current = [0, -1];
+              }
+            }}
+          >
+            <canvas ref={snakeCanvasRef} width={300} height={300} className="block w-[280px] xs:w-[300px] h-[280px] xs:h-[300px] max-w-full aspect-square" />
             {snakeGameOver && (
-              <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-3">
-                <span className="font-pixel text-base text-arcade-coral">GAME OVER</span>
+              <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center space-y-3 p-4">
+                <span className="font-pixel text-sm sm:text-base text-arcade-coral">GAME OVER</span>
                 <button
                   onClick={startSnake}
                   className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-xs"
@@ -358,9 +377,50 @@ export default function GameTools() {
               onClick={startSnake}
               className="btn-pixel btn-pixel-emerald w-full py-2.5 font-pixel text-xs"
             >
-              START GAME (ARROW KEYS)
+              START GAME
             </button>
           )}
+
+          {/* Touch Arcade D-Pad Controller (Ideal for phones & tablets) */}
+          <div className="pt-2 max-w-[200px] mx-auto select-none">
+            <div className="text-[9px] text-arcade-muted font-pixel mb-1.5 uppercase">TOUCH ARROW D-PAD</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <div></div>
+              <button
+                type="button"
+                onClick={() => { if (dirRef.current[1] === 0) dirRef.current = [0, -1]; playClick(); }}
+                className="btn-pixel btn-pixel-surface py-2 text-arcade-emerald font-pixel text-sm flex items-center justify-center"
+                aria-label="Up"
+              >
+                ▲
+              </button>
+              <div></div>
+              <button
+                type="button"
+                onClick={() => { if (dirRef.current[0] === 0) dirRef.current = [-1, 0]; playClick(); }}
+                className="btn-pixel btn-pixel-surface py-2 text-arcade-emerald font-pixel text-sm flex items-center justify-center"
+                aria-label="Left"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (dirRef.current[1] === 0) dirRef.current = [0, 1]; playClick(); }}
+                className="btn-pixel btn-pixel-surface py-2 text-arcade-emerald font-pixel text-sm flex items-center justify-center"
+                aria-label="Down"
+              >
+                ▼
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (dirRef.current[0] === 0) dirRef.current = [1, 0]; playClick(); }}
+                className="btn-pixel btn-pixel-surface py-2 text-arcade-emerald font-pixel text-sm flex items-center justify-center"
+                aria-label="Right"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

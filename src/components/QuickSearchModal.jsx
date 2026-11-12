@@ -63,8 +63,8 @@ export default function QuickSearchModal({ isOpen, onClose, tools, onSelectTool 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="pixel-card w-full max-w-2xl bg-deck-surface border-2 border-arcade-emerald shadow-pixel-lg">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-3 sm:pt-14 p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="pixel-card w-full max-w-2xl bg-deck-surface border-2 border-arcade-emerald shadow-pixel-lg max-h-[92vh] flex flex-col overflow-hidden">
         {/* Search Input Bar */}
         <div className="p-3 bg-deck-dark border-b-2 border-deck-border flex items-center gap-3">
           <Search className="w-5 h-5 text-arcade-emerald shrink-0" />

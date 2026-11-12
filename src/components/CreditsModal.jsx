@@ -6,13 +6,13 @@ export default function CreditsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="pixel-card w-full max-w-xl bg-deck-surface border-2 border-arcade-amber shadow-pixel-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="pixel-card w-full max-w-xl bg-deck-surface border-2 border-arcade-amber shadow-pixel-lg max-h-[92vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="pixel-card-header bg-deck-dark border-b-2 border-arcade-amber/60">
+        <div className="pixel-card-header bg-deck-dark border-b-2 border-arcade-amber/60 shrink-0">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-arcade-amber" />
-            <span className="font-pixel text-xs text-arcade-amber uppercase tracking-wider">
+            <span className="font-pixel text-[10px] sm:text-xs text-arcade-amber uppercase tracking-wider">
               SYSTEM ARCHITECT // MANIFESTO
             </span>
           </div>
@@ -25,7 +25,7 @@ export default function CreditsModal({ isOpen, onClose }) {
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 font-mono text-sm">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 font-mono text-sm overflow-y-auto">
           {/* Hero Profile Badge */}
           <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-deck-bg border-2 border-deck-border">
             <div className="relative">
