@@ -2,7 +2,7 @@
   "name": "omnitools-suite",
   "version": "1.0.0",
   "type": "module",
-  "description": "The Ultimate Pixel-Modern Utility & Downloader Suite - Made by Hatim Mushtaq",
+  "description": "The Ultimate Pixel-Modern Cyber Deck & Utilities Matrix",
   "main": "server/index.js",
   "scripts": {
     "dev": "vite",
