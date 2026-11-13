@@ -10,10 +10,24 @@ export default function CalculatorTools() {
   // 'scientific' | 'units' | 'tip' | 'loan' | 'age' | 'bmi' | 'discount' | 'fuel' | 'electricity' | 'charts'
 
   // TIP & BILL SPLIT CALCULATOR
-  const [billAmount, setBillAmount] = useState(120);
-  const [tipPercent, setTipPercent] = useState(15);
-  const [splitCount, setSplitCount] = useState(3);
+  const [billAmount, setBillAmount] = useState(0);
+  const [tipPercent, setTipPercent] = useState(0);
+  const [splitCount, setSplitCount] = useState(1);
   const [roundUp, setRoundUp] = useState(false);
+
+  // Helper to remove leading zero when typing (e.g. typing 653 won't become 0653)
+  const handleCleanNum = (setter) => (e) => {
+    let val = e.target.value;
+    if (val === '') {
+      setter(0);
+      return;
+    }
+    if (/^0[0-9]+/.test(val)) {
+      val = val.replace(/^0+/, '');
+      if (val === '') val = '0';
+    }
+    setter(Number(val) || 0);
+  };
 
   const rawTip = (Number(billAmount) * Number(tipPercent)) / 100;
   const rawTotal = Number(billAmount) + rawTip;
@@ -23,9 +37,9 @@ export default function CalculatorTools() {
   const perPersonTip = splitCount > 0 ? (finalTip / splitCount).toFixed(2) : 0;
 
   // LOAN & MORTGAGE AMORTIZATION
-  const [loanPrincipal, setLoanPrincipal] = useState(150000);
-  const [loanRate, setLoanRate] = useState(6.5);
-  const [loanYears, setLoanYears] = useState(15);
+  const [loanPrincipal, setLoanPrincipal] = useState(0);
+  const [loanRate, setLoanRate] = useState(0);
+  const [loanYears, setLoanYears] = useState(0);
 
   const monthlyRate = (Number(loanRate) / 100) / 12;
   const totalMonths = Number(loanYears) * 12;
@@ -156,52 +170,55 @@ export default function CalculatorTools() {
   }, [birthDate]);
 
   // BMI Calculator
-  const [bmiWeight, setBmiWeight] = useState(70);
-  const [bmiHeight, setBmiHeight] = useState(175);
+  const [bmiWeight, setBmiWeight] = useState(0);
+  const [bmiHeight, setBmiHeight] = useState(0);
   const [bmiResult, setBmiResult] = useState(null);
 
   useEffect(() => {
-    const hM = bmiHeight / 100;
-    if (hM > 0) {
-      const val = (bmiWeight / (hM * hM)).toFixed(1);
+    const hM = Number(bmiHeight) / 100;
+    const w = Number(bmiWeight);
+    if (hM > 0 && w > 0) {
+      const val = (w / (hM * hM)).toFixed(1);
       let cat = 'Normal Weight';
       let col = 'text-arcade-emerald';
       if (val < 18.5) { cat = 'Underweight'; col = 'text-arcade-cyan'; }
       else if (val >= 25 && val < 30) { cat = 'Overweight'; col = 'text-arcade-amber'; }
       else if (val >= 30) { cat = 'Obesity'; col = 'text-arcade-coral'; }
       setBmiResult({ val, cat, col });
+    } else {
+      setBmiResult(null);
     }
   }, [bmiWeight, bmiHeight]);
 
   // Discount Calculator
-  const [originalPrice, setOriginalPrice] = useState(100);
-  const [discountPercent, setDiscountPercent] = useState(20);
-  const [taxPercent, setTaxPercent] = useState(5);
+  const [originalPrice, setOriginalPrice] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [taxPercent, setTaxPercent] = useState(0);
 
-  const discountAmount = (originalPrice * (discountPercent / 100));
-  const priceAfterDiscount = originalPrice - discountAmount;
-  const taxAmount = (priceAfterDiscount * (taxPercent / 100));
+  const discountAmount = (Number(originalPrice) * (Number(discountPercent) / 100));
+  const priceAfterDiscount = Number(originalPrice) - discountAmount;
+  const taxAmount = (priceAfterDiscount * (Number(taxPercent) / 100));
   const finalPrice = priceAfterDiscount + taxAmount;
 
   // Electricity Calculator
-  const [wattage, setWattage] = useState(1500);
-  const [hoursPerDay, setHoursPerDay] = useState(6);
-  const [kwhRate, setKwhRate] = useState(0.15);
+  const [wattage, setWattage] = useState(0);
+  const [hoursPerDay, setHoursPerDay] = useState(0);
+  const [kwhRate, setKwhRate] = useState(0);
 
-  const dailyKwh = (wattage * hoursPerDay) / 1000;
-  const dailyCost = dailyKwh * kwhRate;
+  const dailyKwh = (Number(wattage) * Number(hoursPerDay)) / 1000;
+  const dailyCost = dailyKwh * Number(kwhRate);
   const monthlyCost = dailyCost * 30;
   const yearlyCost = dailyCost * 365;
 
   // Fuel / Mileage Calculator
-  const [tripDistance, setTripDistance] = useState(450);
-  const [fuelEfficiency, setFuelEfficiency] = useState(15);
-  const [fuelPricePerLitre, setFuelPricePerLitre] = useState(1.4);
+  const [tripDistance, setTripDistance] = useState(0);
+  const [fuelEfficiency, setFuelEfficiency] = useState(0);
+  const [fuelPricePerLitre, setFuelPricePerLitre] = useState(0);
   const [passengers, setPassengers] = useState(1);
 
-  const totalFuelNeeded = tripDistance / (fuelEfficiency || 1);
-  const totalTripCost = totalFuelNeeded * fuelPricePerLitre;
-  const costPerPerson = totalTripCost / (passengers || 1);
+  const totalFuelNeeded = fuelEfficiency > 0 ? Number(tripDistance) / Number(fuelEfficiency) : 0;
+  const totalTripCost = totalFuelNeeded * Number(fuelPricePerLitre);
+  const costPerPerson = passengers > 0 ? totalTripCost / Number(passengers) : totalTripCost;
 
   // Line / Pie Chart Maker
   const [chartType, setChartType] = useState('pie');
@@ -488,13 +505,21 @@ export default function CalculatorTools() {
         <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs">
           <div className="space-y-4">
             <div>
-              <div className="flex justify-between text-arcade-muted mb-1">
+              <div className="flex justify-between items-center text-arcade-muted mb-1">
                 <span>Weight (kg)</span>
-                <span className="font-bold">{bmiWeight} kg</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="300"
+                  value={bmiWeight}
+                  onChange={handleCleanNum(setBmiWeight)}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  className="w-20 px-2 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[10px] text-arcade-emerald text-right"
+                />
               </div>
               <input
                 type="range"
-                min="30"
+                min="0"
                 max="200"
                 value={bmiWeight}
                 onChange={(e) => setBmiWeight(Number(e.target.value))}
@@ -503,13 +528,21 @@ export default function CalculatorTools() {
             </div>
 
             <div>
-              <div className="flex justify-between text-arcade-muted mb-1">
+              <div className="flex justify-between items-center text-arcade-muted mb-1">
                 <span>Height (cm)</span>
-                <span className="font-bold">{bmiHeight} cm</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="250"
+                  value={bmiHeight}
+                  onChange={handleCleanNum(setBmiHeight)}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  className="w-20 px-2 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[10px] text-arcade-cyan text-right"
+                />
               </div>
               <input
                 type="range"
-                min="100"
+                min="0"
                 max="230"
                 value={bmiHeight}
                 onChange={(e) => setBmiHeight(Number(e.target.value))}
@@ -540,8 +573,9 @@ export default function CalculatorTools() {
             <input
               type="number"
               value={originalPrice}
-              onChange={(e) => setOriginalPrice(Number(e.target.value))}
-              className="w-full bg-deck-bg border border-deck-border p-2"
+              onChange={handleCleanNum(setOriginalPrice)}
+              onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+              className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm"
             />
           </div>
 
@@ -551,8 +585,9 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={discountPercent}
-                onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                className="w-full bg-deck-bg border border-deck-border p-2"
+                onChange={handleCleanNum(setDiscountPercent)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm text-arcade-emerald"
               />
             </div>
             <div>
@@ -560,8 +595,9 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={taxPercent}
-                onChange={(e) => setTaxPercent(Number(e.target.value))}
-                className="w-full bg-deck-bg border border-deck-border p-2"
+                onChange={handleCleanNum(setTaxPercent)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm text-arcade-coral"
               />
             </div>
           </div>
@@ -592,7 +628,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={tripDistance}
-                onChange={(e) => setTripDistance(Number(e.target.value))}
+                onChange={handleCleanNum(setTripDistance)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -601,7 +638,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={fuelEfficiency}
-                onChange={(e) => setFuelEfficiency(Number(e.target.value))}
+                onChange={handleCleanNum(setFuelEfficiency)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -613,7 +651,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={fuelPricePerLitre}
-                onChange={(e) => setFuelPricePerLitre(Number(e.target.value))}
+                onChange={handleCleanNum(setFuelPricePerLitre)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -621,8 +660,10 @@ export default function CalculatorTools() {
               <label className="text-arcade-muted block mb-1">Passengers (Split)</label>
               <input
                 type="number"
+                min="1"
                 value={passengers}
-                onChange={(e) => setPassengers(Number(e.target.value))}
+                onChange={handleCleanNum(setPassengers)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -653,8 +694,9 @@ export default function CalculatorTools() {
             <input
               type="number"
               value={wattage}
-              onChange={(e) => setWattage(Number(e.target.value))}
-              className="w-full bg-deck-bg border border-deck-border p-2"
+              onChange={handleCleanNum(setWattage)}
+              onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+              className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm"
             />
           </div>
 
@@ -664,7 +706,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={hoursPerDay}
-                onChange={(e) => setHoursPerDay(Number(e.target.value))}
+                onChange={handleCleanNum(setHoursPerDay)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -674,7 +717,8 @@ export default function CalculatorTools() {
                 type="number"
                 step="0.01"
                 value={kwhRate}
-                onChange={(e) => setKwhRate(Number(e.target.value))}
+                onChange={handleCleanNum(setKwhRate)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -767,8 +811,9 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={billAmount}
-                onChange={(e) => setBillAmount(e.target.value)}
-                className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-base"
+                onChange={handleCleanNum(setBillAmount)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-base text-arcade-emerald"
               />
             </div>
             <div>
@@ -778,16 +823,28 @@ export default function CalculatorTools() {
                 min="1"
                 max="50"
                 value={splitCount}
-                onChange={(e) => setSplitCount(Number(e.target.value))}
+                onChange={handleCleanNum(setSplitCount)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-base"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-arcade-muted block mb-1">Tip Percentage ({tipPercent}%)</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-arcade-muted">Tip Percentage ({tipPercent}%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tipPercent}
+                onChange={handleCleanNum(setTipPercent)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-arcade-amber text-right"
+              />
+            </div>
             <div className="flex gap-2">
-              {[10, 15, 18, 20, 25].map(p => (
+              {[0, 10, 15, 18, 20, 25].map(p => (
                 <button
                   key={p}
                   type="button"
@@ -847,7 +904,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={loanPrincipal}
-                onChange={(e) => setLoanPrincipal(e.target.value)}
+                onChange={handleCleanNum(setLoanPrincipal)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2 font-mono"
               />
             </div>
@@ -857,7 +915,8 @@ export default function CalculatorTools() {
                 type="number"
                 step="0.1"
                 value={loanRate}
-                onChange={(e) => setLoanRate(e.target.value)}
+                onChange={handleCleanNum(setLoanRate)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2 font-mono"
               />
             </div>
@@ -866,7 +925,8 @@ export default function CalculatorTools() {
               <input
                 type="number"
                 value={loanYears}
-                onChange={(e) => setLoanYears(e.target.value)}
+                onChange={handleCleanNum(setLoanYears)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2 font-mono"
               />
             </div>

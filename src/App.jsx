@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
 import ToolWrapper from './components/ToolWrapper';
+import ErrorBoundary from './components/ErrorBoundary';
 import CreditsModal from './components/CreditsModal';
 import QuickSearchModal from './components/QuickSearchModal';
 
@@ -166,6 +167,7 @@ export default function App() {
       <main className={`flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 md:p-6 space-y-4 sm:space-y-6 transition-all duration-300 ${
         viewportSimulation === 'mobile' ? 'viewport-simulate-mobile' : viewportSimulation === 'tablet' ? 'viewport-simulate-tablet' : ''
       }`}>
+        <ErrorBoundary onResetToHome={() => setActiveCategory('downloader')}>
         {/* 1. UNIVERSAL DOWNLOADER */}
         {activeCategory === 'downloader' && (
           <ToolWrapper
@@ -399,6 +401,7 @@ export default function App() {
             <HumanBenchmark />
           </ToolWrapper>
         )}
+        </ErrorBoundary>
       </main>
 
       {/* Prominent Typographic Footer */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Flashlight, QrCode, BookOpen, Languages, CheckSquare, 
-  FileEdit, ShoppingCart, Key, Shield, Copy, Check, RefreshCw
+  FileEdit, ShoppingCart, Key, Shield, Copy, Check, RefreshCw, Trash2
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { playClick, playCoin } from '../../audio/soundEffects';
@@ -331,9 +331,19 @@ export default function EssentialTools() {
             {passMode === 'csprng' ? (
               <>
                 <div>
-                  <div className="flex justify-between text-arcade-muted mb-1">
-                    <span>Password Length ({passLength} Characters)</span>
-                    <span className="font-bold">{passLength}</span>
+                  <div className="flex justify-between items-center text-arcade-muted mb-1">
+                    <span>Password Length ({passLength} Chars)</span>
+                    <input
+                      type="number"
+                      min="8"
+                      max="64"
+                      value={passLength}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (!isNaN(val)) setPassLength(Math.min(64, Math.max(8, val)));
+                      }}
+                      className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-arcade-amber text-right"
+                    />
                   </div>
                   <input
                     type="range"
@@ -389,14 +399,24 @@ export default function EssentialTools() {
               </>
             ) : (
               <div>
-                <div className="flex justify-between text-arcade-muted mb-1">
+                <div className="flex justify-between items-center text-arcade-muted mb-1">
                   <span>Passphrase Words ({wordCount} Words)</span>
-                  <span className="font-bold">{wordCount}</span>
+                  <input
+                    type="number"
+                    min="3"
+                    max="10"
+                    value={wordCount}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (!isNaN(val)) setWordCount(Math.min(10, Math.max(3, val)));
+                    }}
+                    className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-arcade-amber text-right"
+                  />
                 </div>
                 <input
                   type="range"
                   min="3"
-                  max="8"
+                  max="10"
                   value={wordCount}
                   onChange={(e) => setWordCount(Number(e.target.value))}
                   className="w-full accent-arcade-amber"
@@ -583,11 +603,17 @@ export default function EssentialTools() {
               className="flex-1 bg-deck-bg border border-deck-border p-2"
             />
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={newShopPrice}
-              onChange={(e) => setNewShopPrice(e.target.value)}
-              placeholder="Price ($)"
-              className="w-24 bg-deck-bg border border-deck-border p-2"
+              onChange={(e) => {
+                let v = e.target.value.replace(/[^0-9.]/g, '');
+                if (/^0[0-9]/.test(v)) v = v.replace(/^0+/, '');
+                setNewShopPrice(v);
+              }}
+              onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+              placeholder="0.00"
+              className="w-24 bg-deck-bg border border-deck-border p-2 text-arcade-emerald font-bold"
             />
             <button
               type="submit"

@@ -223,15 +223,53 @@ export default function DateTimeTools() {
     });
   }, [startDate, endDate]);
 
-  // 7. WORLD TIMEZONES
-  const WORLD_CITIES = [
-    { city: 'New York (EDT/EST)', tz: 'America/New_York' },
-    { city: 'London (GMT/BST)', tz: 'Europe/London' },
-    { city: 'Tokyo (JST)', tz: 'Asia/Tokyo' },
-    { city: 'Dubai (GST)', tz: 'Asia/Dubai' },
-    { city: 'Sydney (AEST)', tz: 'Australia/Sydney' },
-    { city: 'New Delhi (IST)', tz: 'Asia/Kolkata' },
-  ];
+  // 7. WORLD TIMEZONES (Comprehensive IANA database with live search)
+  const [tzSearch, setTzSearch] = useState('');
+  const [tzRegionFilter, setTzRegionFilter] = useState('ALL');
+  const [tzLimit, setTzLimit] = useState(36);
+
+  // Get all system/browser supported IANA timezones
+  const ALL_TIMEZONES = React.useMemo(() => {
+    let list = [];
+    try {
+      if (typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function') {
+        list = Intl.supportedValuesOf('timeZone');
+      }
+    } catch (e) {}
+
+    if (!list || list.length === 0) {
+      list = [
+        'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+        'America/Anchorage', 'America/Honolulu', 'America/Toronto', 'America/Vancouver',
+        'America/Mexico_City', 'America/Bogota', 'America/Lima', 'America/Santiago',
+        'America/Sao_Paulo', 'America/Buenos_Aires', 'Europe/London', 'Europe/Dublin',
+        'Europe/Paris', 'Europe/Berlin', 'Europe/Rome', 'Europe/Madrid', 'Europe/Amsterdam',
+        'Europe/Brussels', 'Europe/Vienna', 'Europe/Stockholm', 'Europe/Oslo', 'Europe/Copenhagen',
+        'Europe/Helsinki', 'Europe/Athens', 'Europe/Bucharest', 'Europe/Warsaw', 'Europe/Prague',
+        'Europe/Budapest', 'Europe/Kiev', 'Europe/Moscow', 'Europe/Istanbul', 'Asia/Dubai',
+        'Asia/Riyadh', 'Asia/Jerusalem', 'Asia/Tehran', 'Asia/Baku', 'Asia/Tbilisi', 'Asia/Yerevan',
+        'Asia/Karachi', 'Asia/Kolkata', 'Asia/Dhaka', 'Asia/Kathmandu', 'Asia/Bangkok', 'Asia/Jakarta',
+        'Asia/Singapore', 'Asia/Kuala_Lumpur', 'Asia/Manila', 'Asia/Hong_Kong', 'Asia/Shanghai',
+        'Asia/Taipei', 'Asia/Seoul', 'Asia/Tokyo', 'Australia/Sydney', 'Australia/Melbourne',
+        'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Perth', 'Pacific/Auckland',
+        'Pacific/Fiji', 'Pacific/Guam', 'Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos',
+        'Africa/Nairobi', 'Africa/Casablanca', 'Africa/Accra', 'Africa/Addis_Ababa'
+      ];
+    }
+    return list;
+  }, []);
+
+  const filteredTimezones = React.useMemo(() => {
+    const q = tzSearch.trim().toLowerCase();
+    return ALL_TIMEZONES.filter(tz => {
+      if (tzRegionFilter !== 'ALL') {
+        if (!tz.toLowerCase().startsWith(tzRegionFilter.toLowerCase())) return false;
+      }
+      if (!q) return true;
+      const cleanName = tz.replace(/_/g, ' ').toLowerCase();
+      return cleanName.includes(q) || tz.toLowerCase().includes(q);
+    });
+  }, [ALL_TIMEZONES, tzSearch, tzRegionFilter]);
 
   return (
     <div className="space-y-6">
@@ -492,16 +530,135 @@ export default function DateTimeTools() {
 
       {/* 6. WORLD TIMEZONES */}
       {activeTab === 'zones' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono">
-          {WORLD_CITIES.map(c => {
-            const timeStr = currentTime.toLocaleTimeString([], { timeZone: c.tz, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            return (
-              <div key={c.city} className="pixel-card bg-deck-dark p-4 border border-deck-border space-y-2">
-                <span className="font-pixel text-[9px] text-arcade-muted">{c.city}</span>
-                <div className="font-pixel text-2xl text-arcade-emerald">{timeStr}</div>
+        <div className="space-y-4 font-mono text-xs">
+          {/* Search bar & Region Filters */}
+          <div className="pixel-card bg-deck-dark p-4 space-y-3 border border-deck-border">
+            <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center">
+              <div className="flex-1 w-full relative">
+                <input
+                  type="text"
+                  value={tzSearch}
+                  onChange={(e) => { setTzSearch(e.target.value); setTzLimit(36); }}
+                  placeholder="Search 400+ world timezones (e.g. Tokyo, London, Kolkata, New York, Cairo)..."
+                  className="w-full bg-deck-bg border-2 border-deck-border focus:border-arcade-purple p-2.5 font-mono text-xs text-white placeholder:text-arcade-muted/50"
+                />
+                {tzSearch && (
+                  <button
+                    onClick={() => setTzSearch('')}
+                    className="absolute right-2.5 top-2.5 text-arcade-coral font-bold text-xs"
+                  >
+                    CLEAR
+                  </button>
+                )}
               </div>
-            );
-          })}
+              <span className="text-[10px] text-arcade-muted font-pixel shrink-0">
+                {filteredTimezones.length} ZONES FOUND
+              </span>
+            </div>
+
+            {/* Region quick filter tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+              {['ALL', 'America', 'Europe', 'Asia', 'Africa', 'Australia', 'Pacific', 'Atlantic', 'Indian', 'UTC'].map(reg => (
+                <button
+                  key={reg}
+                  type="button"
+                  onClick={() => { setTzRegionFilter(reg); setTzLimit(36); playClick(); }}
+                  className={`px-2.5 py-1 font-pixel text-[8px] uppercase shrink-0 border transition-colors ${
+                    tzRegionFilter === reg
+                      ? 'bg-purple-500 text-white border-black font-bold shadow-pixel-sm'
+                      : 'bg-deck-bg border-deck-border text-arcade-muted hover:text-white'
+                  }`}
+                >
+                  {reg}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Timezones Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredTimezones.slice(0, tzLimit).map(tz => {
+              let timeStr = '--:--:--';
+              let dateStr = '';
+              let isDay = true;
+              let offsetStr = '';
+
+              try {
+                timeStr = currentTime.toLocaleTimeString([], {
+                  timeZone: tz,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: true
+                });
+
+                dateStr = currentTime.toLocaleDateString([], {
+                  timeZone: tz,
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                });
+
+                // Detect day vs night based on hour in that timezone
+                const hour24 = parseInt(currentTime.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', hour12: false }), 10);
+                isDay = hour24 >= 6 && hour24 < 18;
+
+                // Approximate offset string
+                const tzDate = new Date(currentTime.toLocaleString('en-US', { timeZone: tz }));
+                const utcDate = new Date(currentTime.toLocaleString('en-US', { timeZone: 'UTC' }));
+                const diffMin = Math.round((tzDate - utcDate) / 60000);
+                const diffH = Math.floor(Math.abs(diffMin) / 60);
+                const diffM = Math.abs(diffMin) % 60;
+                offsetStr = `UTC${diffMin >= 0 ? '+' : '-'}${diffH}${diffM > 0 ? `:${diffM}` : ''}`;
+              } catch (e) {
+                timeStr = 'Timezone error';
+              }
+
+              const parts = tz.split('/');
+              const region = parts[0];
+              const city = (parts[parts.length - 1] || tz).replace(/_/g, ' ');
+
+              return (
+                <div
+                  key={tz}
+                  className="pixel-card bg-deck-dark p-3.5 border border-deck-border hover:border-arcade-purple/70 transition-all space-y-2 group"
+                >
+                  <div className="flex items-center justify-between text-[10px] text-arcade-muted">
+                    <span className="font-pixel text-[8px] text-arcade-purple font-bold truncate max-w-[150px]">
+                      {region} // {city}
+                    </span>
+                    <span className="px-1.5 py-0.5 bg-deck-bg border border-deck-border text-[8px] font-mono">
+                      {offsetStr} {isDay ? '☀️' : '🌙'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between pt-1">
+                    <div className="font-pixel text-xl sm:text-2xl text-white tracking-wider group-hover:text-purple-300 transition-colors">
+                      {timeStr}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-arcade-muted/70 pt-1 border-t border-deck-border/40">
+                    <span>{dateStr}</span>
+                    <span className="font-mono text-[9px] truncate max-w-[140px]">{tz}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Load More Button */}
+          {filteredTimezones.length > tzLimit && (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => { setTzLimit(prev => prev + 36); playClick(); }}
+                className="btn-pixel btn-pixel-purple px-6 py-2.5 font-pixel text-[9px]"
+              >
+                LOAD MORE TIMEZONES ({filteredTimezones.length - tzLimit} REMAINING)
+              </button>
+            </div>
+          )}
         </div>
       )}
 

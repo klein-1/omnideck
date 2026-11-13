@@ -23,12 +23,23 @@ export default function DeveloperTools() {
   const [colorBg, setColorBg] = useState('#000000');
 
   const getLuminance = (hex) => {
-    const rgb = parseInt(hex.replace('#', ''), 16);
-    const r = ((rgb >> 16) & 0xff) / 255;
-    const g = ((rgb >> 8) & 0xff) / 255;
-    const b = (rgb & 0xff) / 255;
-    const a = [r, g, b].map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
-    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+    try {
+      if (!hex || typeof hex !== 'string') return 0;
+      const cleanHex = hex.replace('#', '').trim();
+      if (cleanHex.length !== 3 && cleanHex.length !== 6) return 0;
+      const fullHex = cleanHex.length === 3 
+        ? cleanHex.split('').map(c => c + c).join('') 
+        : cleanHex;
+      const rgb = parseInt(fullHex, 16);
+      if (isNaN(rgb)) return 0;
+      const r = ((rgb >> 16) & 0xff) / 255;
+      const g = ((rgb >> 8) & 0xff) / 255;
+      const b = (rgb & 0xff) / 255;
+      const a = [r, g, b].map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+      return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+    } catch {
+      return 0;
+    }
   };
 
   const getContrastRatio = (c1, c2) => {
@@ -53,14 +64,14 @@ export default function DeveloperTools() {
 
   const generatedCurl = `curl -X ${httpMethod} "${httpUrl}" \\
   -H "Content-Type: application/json" \\
-  ${httpAuth ? `-H "Authorization: ${httpAuth}" \\\n  ` : ''}-d '${httpBody.replace(/\n/g, '')}'`;
+  ${httpAuth ? `-H "Authorization: ${httpAuth}" \\\n  ` : ''}-d '${(httpBody || '').replace(/\n/g, '')}'`;
 
   const generatedFetch = `fetch("${httpUrl}", {
   method: "${httpMethod}",
   headers: {
     "Content-Type": "application/json"${httpAuth ? `,\n    "Authorization": "${httpAuth}"` : ''}
   },
-  body: JSON.stringify(${httpBody})
+  body: JSON.stringify(${httpBody || '{}'})
 });`;
 
   // 1. IN-BROWSER CODE RUNNER
@@ -79,18 +90,42 @@ return "Sandbox execution complete.";`);
     playClick();
 
     try {
-      const res = await fetch('/api/dev/run-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: jsCode })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCodeOutput((data.logs || []).join('\n') + (data.result ? `\n\n[RETURN VALUE]: ${data.result}` : ''));
+      // 1. Try server endpoint first
+      let serverRan = false;
+      try {
+        const res = await fetch('/api/dev/run-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: jsCode })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setCodeOutput((data.logs || []).join('\n') + (data.result ? `\n\n[RETURN VALUE]: ${data.result}` : ''));
+            playSuccess();
+            serverRan = true;
+          }
+        }
+      } catch (err) {
+        // Fall back to client-side VM
+      }
+
+      if (!serverRan) {
+        // 2. Client-side browser execution fallback
+        const logs = [];
+        const customConsole = {
+          log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
+          error: (...args) => logs.push('[ERROR] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
+          warn: (...args) => logs.push('[WARN] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
+          info: (...args) => logs.push('[INFO] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '))
+        };
+        const runFn = new Function('console', jsCode);
+        const resVal = runFn(customConsole);
+        setCodeOutput(
+          (logs.length ? logs.join('\n') + '\n\n' : '') + 
+          (resVal !== undefined ? `[RETURN VALUE]: ${typeof resVal === 'object' ? JSON.stringify(resVal, null, 2) : resVal}` : '[EXECUTION FINISHED]')
+        );
         playSuccess();
-      } else {
-        setCodeOutput(`[ERROR]: ${data.error}\n` + (data.logs || []).join('\n'));
-        playError();
       }
     } catch (e) {
       setCodeOutput('Execution Error: ' + e.message);
@@ -172,14 +207,30 @@ return "Sandbox execution complete.";`);
   const decodeJwt = () => {
     playClick();
     try {
-      const parts = jwtToken.split('.');
+      const parts = (jwtToken || '').split('.');
       if (parts.length >= 2) {
-        setJwtHeader(JSON.parse(atob(parts[0])));
-        setJwtPayload(JSON.parse(atob(parts[1])));
+        const base64Decode = (str) => {
+          let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
+          return decodeURIComponent(atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        };
+        try {
+          setJwtHeader(JSON.parse(base64Decode(parts[0])));
+        } catch {
+          setJwtHeader({ error: 'Failed to decode JWT Header' });
+        }
+        try {
+          setJwtPayload(JSON.parse(base64Decode(parts[1])));
+        } catch {
+          setJwtPayload({ error: 'Failed to decode JWT Payload' });
+        }
         playSuccess();
+      } else {
+        alert('Invalid JWT: Token must have at least header and payload segments separated by a dot.');
+        playError();
       }
     } catch (e) {
-      alert('Invalid JWT Token structure');
+      alert('Error decoding token: ' + e.message);
       playError();
     }
   };
@@ -198,16 +249,38 @@ return "Sandbox execution complete.";`);
     playClick();
 
     try {
-      const res = await fetch('/api/net/dns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: dnsDomain.trim() })
-      });
-      const data = await res.json();
-      setDnsResult(data);
-      playSuccess();
+      // 1. Try local server
+      let success = false;
+      try {
+        const res = await fetch('/api/net/dns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: dnsDomain.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDnsResult(data);
+          playSuccess();
+          success = true;
+        }
+      } catch (err) {}
+
+      // 2. Fallback to Cloudflare DoH (DNS over HTTPS)
+      if (!success) {
+        const doh = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(dnsDomain.trim())}&type=A`, {
+          headers: { 'Accept': 'application/dns-json' }
+        });
+        const dData = await doh.json();
+        setDnsResult({
+          domain: dnsDomain,
+          A: (dData.Answer || []).map(a => a.data),
+          MX: [{ exchange: 'DNS-over-HTTPS (DoH Cloudflare Fallback)' }],
+          TXT: [`Status: ${dData.Status === 0 ? 'NOERROR (Resolved)' : 'NXDOMAIN'}`]
+        });
+        playSuccess();
+      }
     } catch (e) {
-      alert('DNS lookup failed');
+      setDnsResult({ domain: dnsDomain, A: ['DNS query timed out / network offline'], MX: [], TXT: [] });
       playError();
     } finally {
       setDnsLoading(false);
@@ -351,33 +424,54 @@ return "Sandbox execution complete.";`);
 
             <div className="space-y-3">
               <div>
-                <div className="flex justify-between text-arcade-muted mb-1">
+                <div className="flex justify-between items-center text-arcade-muted mb-1">
                   <span>Offset X ({shadowX}px)</span>
-                  <span>{shadowX}px</span>
+                  <input 
+                    type="number" 
+                    value={shadowX} 
+                    onChange={(e) => setShadowX(Number(e.target.value) || 0)} 
+                    className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-white text-right"
+                  />
                 </div>
                 <input type="range" min="-50" max="50" value={shadowX} onChange={(e) => setShadowX(Number(e.target.value))} className="w-full accent-arcade-coral" />
               </div>
 
               <div>
-                <div className="flex justify-between text-arcade-muted mb-1">
+                <div className="flex justify-between items-center text-arcade-muted mb-1">
                   <span>Offset Y ({shadowY}px)</span>
-                  <span>{shadowY}px</span>
+                  <input 
+                    type="number" 
+                    value={shadowY} 
+                    onChange={(e) => setShadowY(Number(e.target.value) || 0)} 
+                    className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-white text-right"
+                  />
                 </div>
                 <input type="range" min="-50" max="50" value={shadowY} onChange={(e) => setShadowY(Number(e.target.value))} className="w-full accent-arcade-coral" />
               </div>
 
               <div>
-                <div className="flex justify-between text-arcade-muted mb-1">
+                <div className="flex justify-between items-center text-arcade-muted mb-1">
                   <span>Blur Radius ({shadowBlur}px)</span>
-                  <span>{shadowBlur}px</span>
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={shadowBlur} 
+                    onChange={(e) => setShadowBlur(Math.max(0, Number(e.target.value) || 0))} 
+                    className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-white text-right"
+                  />
                 </div>
                 <input type="range" min="0" max="60" value={shadowBlur} onChange={(e) => setShadowBlur(Number(e.target.value))} className="w-full accent-arcade-coral" />
               </div>
 
               <div>
-                <div className="flex justify-between text-arcade-muted mb-1">
+                <div className="flex justify-between items-center text-arcade-muted mb-1">
                   <span>Spread ({shadowSpread}px)</span>
-                  <span>{shadowSpread}px</span>
+                  <input 
+                    type="number" 
+                    value={shadowSpread} 
+                    onChange={(e) => setShadowSpread(Number(e.target.value) || 0)} 
+                    className="w-16 px-1.5 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[9px] text-white text-right"
+                  />
                 </div>
                 <input type="range" min="-20" max="40" value={shadowSpread} onChange={(e) => setShadowSpread(Number(e.target.value))} className="w-full accent-arcade-coral" />
               </div>

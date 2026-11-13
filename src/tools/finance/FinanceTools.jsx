@@ -93,8 +93,22 @@ export default function FinanceTools() {
     playCoin();
   };
 
+  // Helper to remove leading zero when typing (e.g. typing 653 won't become 0653)
+  const handleCleanNum = (setter) => (e) => {
+    let val = e.target.value;
+    if (val === '') {
+      setter(0);
+      return;
+    }
+    if (/^0[0-9]+/.test(val)) {
+      val = val.replace(/^0+/, '');
+      if (val === '') val = '0';
+    }
+    setter(Number(val) || 0);
+  };
+
   // 2. CURRENCY CONVERTER
-  const [currAmount, setCurrAmount] = useState(100);
+  const [currAmount, setCurrAmount] = useState(0);
   const [currFrom, setCurrFrom] = useState('USD');
   const [currTo, setCurrTo] = useState('EUR');
 
@@ -109,41 +123,41 @@ export default function FinanceTools() {
   };
 
   // 3. MUTUAL FUNDS / SIP CALCULATOR
-  const [sipMonthly, setSipMonthly] = useState(500);
-  const [sipRate, setSipRate] = useState(12);
-  const [sipYears, setSipYears] = useState(10);
+  const [sipMonthly, setSipMonthly] = useState(0);
+  const [sipRate, setSipRate] = useState(0);
+  const [sipYears, setSipYears] = useState(0);
 
-  const sipMonths = sipYears * 12;
-  const sipMonthlyRate = sipRate / 12 / 100;
-  const sipInvested = sipMonthly * sipMonths;
-  const sipTotalValue = Math.round(
-    sipMonthly * ((Math.pow(1 + sipMonthlyRate, sipMonths) - 1) / sipMonthlyRate) * (1 + sipMonthlyRate)
-  );
+  const sipMonths = Number(sipYears) * 12;
+  const sipMonthlyRate = (Number(sipRate) / 12) / 100;
+  const sipInvested = Number(sipMonthly) * sipMonths;
+  const sipTotalValue = (sipMonthlyRate > 0 && sipMonths > 0) ? Math.round(
+    Number(sipMonthly) * ((Math.pow(1 + sipMonthlyRate, sipMonths) - 1) / sipMonthlyRate) * (1 + sipMonthlyRate)
+  ) : sipInvested;
   const sipReturns = sipTotalValue - sipInvested;
 
   // 4. EMI CALCULATOR
-  const [loanAmount, setLoanAmount] = useState(100000);
-  const [loanInterest, setLoanInterest] = useState(8.5);
-  const [loanTenureYears, setLoanTenureYears] = useState(15);
+  const [loanAmount, setLoanAmount] = useState(0);
+  const [loanInterest, setLoanInterest] = useState(0);
+  const [loanTenureYears, setLoanTenureYears] = useState(0);
 
-  const emiMonths = loanTenureYears * 12;
-  const emiMonthlyRate = loanInterest / 12 / 100;
-  const monthlyEmi = Math.round(
-    (loanAmount * emiMonthlyRate * Math.pow(1 + emiMonthlyRate, emiMonths)) /
+  const emiMonths = Number(loanTenureYears) * 12;
+  const emiMonthlyRate = (Number(loanInterest) / 12) / 100;
+  const monthlyEmi = (emiMonthlyRate > 0 && emiMonths > 0) ? Math.round(
+    (Number(loanAmount) * emiMonthlyRate * Math.pow(1 + emiMonthlyRate, emiMonths)) /
     (Math.pow(1 + emiMonthlyRate, emiMonths) - 1)
-  );
+  ) : 0;
   const emiTotalPayment = monthlyEmi * emiMonths;
-  const emiTotalInterest = emiTotalPayment - loanAmount;
+  const emiTotalInterest = emiTotalPayment > Number(loanAmount) ? emiTotalPayment - Number(loanAmount) : 0;
 
   // 5. GST CALCULATOR
-  const [gstAmount, setGstAmount] = useState(1000);
-  const [gstRate, setGstRate] = useState(18);
+  const [gstAmount, setGstAmount] = useState(0);
+  const [gstRate, setGstRate] = useState(0);
   const [gstMode, setGstMode] = useState('exclusive');
 
   const calculatedGst = gstMode === 'exclusive' 
-    ? (gstAmount * (gstRate / 100))
-    : (gstAmount - (gstAmount * (100 / (100 + gstRate))));
-  const gstNetTotal = gstMode === 'exclusive' ? (gstAmount + calculatedGst) : gstAmount;
+    ? (Number(gstAmount) * (Number(gstRate) / 100))
+    : (Number(gstAmount) - (Number(gstAmount) * (100 / (100 + (Number(gstRate) || 1)))));
+  const gstNetTotal = gstMode === 'exclusive' ? (Number(gstAmount) + calculatedGst) : Number(gstAmount);
 
   // 6. EXPENSES TRACKER
   const [expenses, setExpenses] = useState([
@@ -339,8 +353,9 @@ export default function FinanceTools() {
               <input
                 type="number"
                 value={currAmount}
-                onChange={(e) => setCurrAmount(e.target.value)}
-                className="w-full bg-deck-bg border border-deck-border p-2.5 text-base font-bold"
+                onChange={handleCleanNum(setCurrAmount)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-full bg-deck-bg border border-deck-border p-2.5 text-base font-bold font-pixel text-arcade-cyan"
               />
             </div>
 
@@ -401,15 +416,23 @@ export default function FinanceTools() {
         <div className="max-w-lg mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs">
           <div className="space-y-4">
             <div>
-              <div className="flex justify-between text-arcade-muted mb-1">
+              <div className="flex justify-between items-center text-arcade-muted mb-1">
                 <span>Monthly Investment ($)</span>
-                <span className="font-bold">${sipMonthly}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100000"
+                  value={sipMonthly}
+                  onChange={handleCleanNum(setSipMonthly)}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  className="w-24 px-2 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[10px] text-arcade-emerald text-right"
+                />
               </div>
               <input
                 type="range"
-                min="50"
+                min="0"
                 max="5000"
-                step="50"
+                step="25"
                 value={sipMonthly}
                 onChange={(e) => setSipMonthly(Number(e.target.value))}
                 className="w-full accent-arcade-emerald"
@@ -417,13 +440,22 @@ export default function FinanceTools() {
             </div>
 
             <div>
-              <div className="flex justify-between text-arcade-muted mb-1">
+              <div className="flex justify-between items-center text-arcade-muted mb-1">
                 <span>Expected Annual Return (%)</span>
-                <span className="font-bold">{sipRate}%</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="50"
+                  step="0.1"
+                  value={sipRate}
+                  onChange={handleCleanNum(setSipRate)}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  className="w-20 px-2 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[10px] text-arcade-cyan text-right"
+                />
               </div>
               <input
                 type="range"
-                min="1"
+                min="0"
                 max="30"
                 step="0.5"
                 value={sipRate}
@@ -433,13 +465,21 @@ export default function FinanceTools() {
             </div>
 
             <div>
-              <div className="flex justify-between text-arcade-muted mb-1">
+              <div className="flex justify-between items-center text-arcade-muted mb-1">
                 <span>Time Period (Years)</span>
-                <span className="font-bold">{sipYears} Years</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={sipYears}
+                  onChange={handleCleanNum(setSipYears)}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  className="w-20 px-2 py-0.5 bg-deck-bg border border-deck-border font-pixel text-[10px] text-arcade-amber text-right"
+                />
               </div>
               <input
                 type="range"
-                min="1"
+                min="0"
                 max="40"
                 value={sipYears}
                 onChange={(e) => setSipYears(Number(e.target.value))}
@@ -473,8 +513,9 @@ export default function FinanceTools() {
             <input
               type="number"
               value={loanAmount}
-              onChange={(e) => setLoanAmount(Number(e.target.value))}
-              className="w-full bg-deck-bg border border-deck-border p-2"
+              onChange={handleCleanNum(setLoanAmount)}
+              onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+              className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm text-arcade-emerald"
             />
           </div>
 
@@ -485,7 +526,8 @@ export default function FinanceTools() {
                 type="number"
                 step="0.1"
                 value={loanInterest}
-                onChange={(e) => setLoanInterest(Number(e.target.value))}
+                onChange={handleCleanNum(setLoanInterest)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -494,7 +536,8 @@ export default function FinanceTools() {
               <input
                 type="number"
                 value={loanTenureYears}
-                onChange={(e) => setLoanTenureYears(Number(e.target.value))}
+                onChange={handleCleanNum(setLoanTenureYears)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 className="w-full bg-deck-bg border border-deck-border p-2"
               />
             </div>
@@ -527,24 +570,40 @@ export default function FinanceTools() {
             <input
               type="number"
               value={gstAmount}
-              onChange={(e) => setGstAmount(Number(e.target.value))}
-              className="w-full bg-deck-bg border border-deck-border p-2"
+              onChange={handleCleanNum(setGstAmount)}
+              onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+              className="w-full bg-deck-bg border border-deck-border p-2 font-pixel text-sm"
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-arcade-muted block mb-1">Tax Slab Rate %</label>
+            <div className="flex gap-2">
+              {[0, 5, 12, 18, 28].map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setGstRate(r)}
+                  className={`flex-1 py-1 font-pixel text-[9px] border ${
+                    gstRate === r ? 'bg-arcade-purple text-white border-black font-bold' : 'bg-deck-bg border-deck-border text-arcade-muted'
+                  }`}
+                >
+                  {r}%
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-arcade-muted block mb-1">Tax Slab %</label>
-              <select
+              <label className="text-arcade-muted block mb-1">Custom Rate (%)</label>
+              <input
+                type="number"
                 value={gstRate}
-                onChange={(e) => setGstRate(Number(e.target.value))}
-                className="w-full bg-deck-bg border border-deck-border p-2"
-              >
-                <option value={5}>5%</option>
-                <option value={12}>12%</option>
-                <option value={18}>18%</option>
-                <option value={28}>28%</option>
-              </select>
+                onChange={handleCleanNum(setGstRate)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                className="w-full bg-deck-bg border border-deck-border p-2 text-white font-mono"
+              />
             </div>
             <div>
               <label className="text-arcade-muted block mb-1">Mode</label>

@@ -43,9 +43,13 @@ export default function UniversalDownloader() {
       const res = await fetch('/api/downloader/history');
       if (res.ok) {
         const data = await res.json();
-        setHistory(data);
+        setHistory(Array.isArray(data) ? data : []);
+      } else {
+        setHistory([]);
       }
-    } catch (e) {}
+    } catch (e) {
+      setHistory([]);
+    }
   };
 
   // Inspect Media URL
@@ -190,37 +194,37 @@ export default function UniversalDownloader() {
 
   return (
     <div className="space-y-6">
-      {/* Top Mode Selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-deck-border pb-4">
-        <div className="flex items-center gap-2">
+      {/* Top Mode Selector - Scrollable with visible scrollbar on phone */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-deck-border pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 max-w-full touch-scroll scrollbar-thin">
           <button
             onClick={() => { playClick(); setActiveTab('video'); }}
-            className={`btn-pixel px-4 py-2 font-pixel text-[10px] flex items-center gap-2 ${
+            className={`btn-pixel px-3 sm:px-4 py-2 font-pixel text-[9px] sm:text-[10px] flex items-center gap-2 shrink-0 ${
               activeTab === 'video' ? 'btn-pixel-coral' : 'btn-pixel-surface'
             }`}
           >
-            <Video className="w-3.5 h-3.5" />
+            <Video className="w-3.5 h-3.5 shrink-0" />
             UNIVERSAL DOWNLOADER
           </button>
 
           <button
             onClick={() => { playClick(); setActiveTab('spotify'); }}
-            className={`btn-pixel px-4 py-2 font-pixel text-[10px] flex items-center gap-2 ${
+            className={`btn-pixel px-3 sm:px-4 py-2 font-pixel text-[9px] sm:text-[10px] flex items-center gap-2 shrink-0 ${
               activeTab === 'spotify' ? 'btn-pixel-emerald' : 'btn-pixel-surface'
             }`}
           >
-            <Music className="w-3.5 h-3.5" />
+            <Music className="w-3.5 h-3.5 shrink-0" />
             SPOTIFY & MUSIC STREAM
           </button>
 
           <button
             onClick={() => { playClick(); setActiveTab('history'); }}
-            className={`btn-pixel px-4 py-2 font-pixel text-[10px] flex items-center gap-2 ${
+            className={`btn-pixel px-3 sm:px-4 py-2 font-pixel text-[9px] sm:text-[10px] flex items-center gap-2 shrink-0 ${
               activeTab === 'history' ? 'btn-pixel-amber' : 'btn-pixel-surface'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
-            ARCHIVE ({history.length})
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            ARCHIVE ({Array.isArray(history) ? history.length : 0})
           </button>
         </div>
 
@@ -719,21 +723,21 @@ export default function UniversalDownloader() {
             </button>
           </div>
 
-          {history.length === 0 ? (
+          {!Array.isArray(history) || history.length === 0 ? (
             <div className="p-8 text-center text-arcade-muted font-mono text-xs">
               No previous downloads recorded in this session.
             </div>
           ) : (
             <div className="space-y-2">
-              {history.map((item, idx) => (
+              {(Array.isArray(history) ? history : []).map((item, idx) => (
                 <div
                   key={idx}
                   className="p-3 bg-deck-dark border border-deck-border flex items-center justify-between gap-3 text-xs font-mono"
                 >
                   <div className="min-w-0">
-                    <div className="text-white font-bold truncate">{item.filename}</div>
+                    <div className="text-white font-bold truncate">{item.filename || 'Untitled'}</div>
                     <div className="text-[10px] text-arcade-muted">
-                      {new Date(item.completedAt).toLocaleString()} • {item.type.toUpperCase()} ({item.format})
+                      {item.completedAt ? new Date(item.completedAt).toLocaleString() : 'Unknown'} • {(item.type || 'unknown').toUpperCase()} ({item.format || 'N/A'})
                     </div>
                   </div>
 

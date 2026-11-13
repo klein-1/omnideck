@@ -15,25 +15,103 @@ export default function DeviceInfoTools() {
   const [batteryData, setBatteryData] = useState(null);
 
   useEffect(() => {
-    const gl = document.createElement('canvas').getContext('webgl');
+    // 1. Precise GPU Detection
     let gpuRenderer = 'Standard WebGL Renderer';
-    if (gl) {
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-      if (debugInfo) {
-        gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    let gpuVendor = 'Generic';
+    let maxTextureSize = '4096';
+    let webglVersion = 'WebGL 1.0';
+
+    try {
+      const canvas = document.createElement('canvas');
+      const gl2 = canvas.getContext('webgl2');
+      const gl = gl2 || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        webglVersion = gl2 ? 'WebGL 2.0 (ES 3.0)' : 'WebGL 1.0 (ES 2.0)';
+        maxTextureSize = `${gl.getParameter(gl.MAX_TEXTURE_SIZE)}px`;
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+          gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Integrated GPU';
+          gpuVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'GPU Vendor';
+        }
       }
+    } catch (e) {}
+
+    // 2. Precise Browser Detection
+    const ua = navigator.userAgent;
+    let browserName = 'Browser';
+    let browserVer = '';
+    let engine = 'Blink';
+
+    if (ua.includes('Firefox/')) {
+      browserName = 'Mozilla Firefox';
+      browserVer = ua.split('Firefox/')[1]?.split(' ')[0] || '';
+      engine = 'Gecko';
+    } else if (ua.includes('Edg/')) {
+      browserName = 'Microsoft Edge';
+      browserVer = ua.split('Edg/')[1]?.split(' ')[0] || '';
+      engine = 'Blink';
+    } else if (ua.includes('OPR/') || ua.includes('Opera/')) {
+      browserName = 'Opera';
+      browserVer = ua.split('OPR/')[1]?.split(' ')[0] || '';
+      engine = 'Blink';
+    } else if (ua.includes('Chrome/')) {
+      browserName = 'Google Chrome';
+      browserVer = ua.split('Chrome/')[1]?.split(' ')[0] || '';
+      engine = 'Blink';
+    } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+      browserName = 'Apple Safari';
+      browserVer = ua.split('Version/')[1]?.split(' ')[0] || '';
+      engine = 'WebKit';
     }
 
+    // 3. Precise OS Detection
+    let osName = 'Desktop OS';
+    let osArch = navigator.userAgent.includes('Win64') || navigator.userAgent.includes('x64') ? '64-bit' : '32-bit';
+
+    if (ua.includes('Windows NT 10.0')) osName = 'Windows 10 / 11';
+    else if (ua.includes('Windows NT 6.3')) osName = 'Windows 8.1';
+    else if (ua.includes('Windows NT 6.1')) osName = 'Windows 7';
+    else if (ua.includes('Mac OS X')) osName = 'macOS ' + (ua.split('Mac OS X ')[1]?.split(')')[0]?.replace(/_/g, '.') || '');
+    else if (ua.includes('Android')) osName = 'Android ' + (ua.split('Android ')[1]?.split(';')[0] || '');
+    else if (ua.includes('iPhone') || ua.includes('iPad')) osName = 'iOS / iPadOS';
+    else if (ua.includes('Linux')) osName = 'Linux Distribution';
+
+    // 4. Display & Screen Capabilities
+    const dpr = window.devicePixelRatio || 1;
+    const isHDR = window.matchMedia('(dynamic-range: high)').matches;
+    const isP3 = window.matchMedia('(color-gamut: p3)').matches;
+    const touchPoints = navigator.maxTouchPoints || 0;
+    const isTouch = touchPoints > 0 || 'ontouchstart' in window;
+
+    // 5. Network Information
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
     setDeviceData({
-      os: navigator.platform || 'Desktop OS',
-      browser: navigator.userAgent.split(' ')[0],
-      cores: navigator.hardwareConcurrency || '4',
-      ram: (navigator.deviceMemory ? `${navigator.deviceMemory} GB` : '8+ GB'),
-      screen: `${window.screen.width} × ${window.screen.height} (${window.devicePixelRatio}x DPR)`,
-      colorDepth: `${window.screen.colorDepth}-bit`,
+      browser: `${browserName} v${browserVer}`,
+      browserName,
+      browserVer,
+      engine,
+      os: `${osName} (${osArch})`,
+      cores: navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Logical Cores` : '4 Cores',
+      ram: navigator.deviceMemory ? `${navigator.deviceMemory} GB Reported RAM` : 'System Hardware RAM',
+      screen: `${window.screen.width} × ${window.screen.height} px`,
+      viewport: `${window.innerWidth} × ${window.innerHeight} px`,
+      dpr: `${dpr}x ${dpr > 1 ? '(HiDPI / Retina)' : '(Standard)'}`,
+      colorDepth: `${window.screen.colorDepth}-bit (${isHDR ? 'HDR10' : 'SDR'})`,
+      gamut: isP3 ? 'Wide Color P3' : 'Standard sRGB',
       gpu: gpuRenderer,
-      online: navigator.onLine ? 'Connected' : 'Offline',
-      language: navigator.language || 'en-US'
+      gpuVendor,
+      webglVersion,
+      maxTextureSize,
+      touchSupport: isTouch ? `Touch Enabled (${touchPoints} Points)` : 'Mouse / Pointer Only',
+      online: navigator.onLine ? 'Connected (Online)' : 'Disconnected (Offline)',
+      netType: conn ? `${conn.effectiveType?.toUpperCase() || 'BROADBAND'} (${conn.downlink || 0} Mbps)` : 'LAN / Wi-Fi',
+      rtt: conn?.rtt ? `${conn.rtt} ms RTT` : 'Normal Latency',
+      language: `${navigator.language} (${(navigator.languages || []).join(', ')})`,
+      cookies: navigator.cookieEnabled ? 'Enabled' : 'Blocked',
+      wasm: typeof WebAssembly === 'object' ? 'Supported (Hardware Acceleration)' : 'Unsupported',
+      webgpu: 'gpu' in navigator ? 'WebGPU Active' : 'Fallback WebGL',
+      pdfViewer: navigator.pdfViewerEnabled ? 'Native PDF Engine Active' : 'External PDF'
     });
 
     if ('getBattery' in navigator) {
@@ -41,7 +119,9 @@ export default function DeviceInfoTools() {
         const updateBat = () => {
           setBatteryData({
             level: Math.round(bat.level * 100),
-            charging: bat.charging
+            charging: bat.charging,
+            chargingTime: bat.chargingTime,
+            dischargingTime: bat.dischargingTime
           });
         };
         updateBat();
@@ -186,21 +266,40 @@ export default function DeviceInfoTools() {
     try {
       if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
-        const usageMB = (estimate.usage / (1024 * 1024)).toFixed(2);
-        const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
-        const quotaGB = (estimate.quota / (1024 * 1024 * 1024)).toFixed(2);
-        const percent = ((estimate.usage / estimate.quota) * 100).toFixed(2);
+        const usageBytes = estimate.usage || 0;
+        const quotaBytes = estimate.quota || 0;
+
+        const formatBytes = (bytes) => {
+          if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+          if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+          if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return bytes + ' Bytes';
+        };
+
+        const percent = quotaBytes > 0 ? ((usageBytes / quotaBytes) * 100).toFixed(2) : '0';
         setStorageData({
-          usageMB,
-          quotaMB,
-          quotaGB,
-          percent
+          usageStr: formatBytes(usageBytes),
+          quotaStr: formatBytes(quotaBytes),
+          usageBytes,
+          quotaBytes,
+          percent: parseFloat(percent)
         });
       } else {
-        setStorageData({ error: 'Storage estimation API not supported in this browser environment.' });
+        // Fallback: estimate LocalStorage usage
+        let total = 0;
+        for (let x in localStorage) {
+          if (localStorage.hasOwnProperty(x)) {
+            total += ((localStorage[x]?.length || 0) + x.length) * 2;
+          }
+        }
+        setStorageData({
+          usageStr: (total / 1024).toFixed(2) + ' KB (LocalStorage)',
+          quotaStr: '~5.00 MB (Standard Web Storage)',
+          percent: ((total / (5 * 1024 * 1024)) * 100).toFixed(2)
+        });
       }
     } catch (e) {
-      setStorageData({ error: e.message });
+      setStorageData({ error: 'Storage API access restricted: ' + e.message });
     } finally {
       setStorageLoading(false);
     }
@@ -292,40 +391,78 @@ export default function DeviceInfoTools() {
       {/* 1. HARDWARE SPECS */}
       {activeTab === 'specs' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
-            <div className="pixel-card p-4 space-y-1">
-              <span className="text-arcade-muted text-[10px] font-pixel">CPU ARCHITECTURE</span>
-              <div className="font-pixel text-lg text-arcade-emerald">{deviceData.cores} LOGICAL CORES</div>
-              <p className="text-[11px] text-slate-500">Concurrency Threads</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 font-mono text-xs">
+            {/* Browser Identity */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-cyan transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">WEB BROWSER & ENGINE</span>
+              <div className="font-pixel text-base text-arcade-cyan">{deviceData.browserName || 'Browser'}</div>
+              <p className="text-[11px] text-white font-mono">v{deviceData.browserVer || 'Latest'} // {deviceData.engine} Core</p>
             </div>
 
-            <div className="pixel-card p-4 space-y-1">
-              <span className="text-arcade-muted text-[10px] font-pixel">DEVICE MEMORY (RAM)</span>
-              <div className="font-pixel text-lg text-arcade-cyan">{deviceData.ram}</div>
-              <p className="text-[11px] text-slate-500">Reported Hardware Quota</p>
+            {/* Operating System */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-emerald transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">HOST OPERATING SYSTEM</span>
+              <div className="font-pixel text-base text-arcade-emerald">{deviceData.os || 'OS Detected'}</div>
+              <p className="text-[11px] text-slate-400 font-mono">{deviceData.touchSupport}</p>
             </div>
 
-            <div className="pixel-card p-4 space-y-1">
-              <span className="text-arcade-muted text-[10px] font-pixel">SCREEN RESOLUTION</span>
-              <div className="font-pixel text-sm text-arcade-amber">{deviceData.screen}</div>
-              <p className="text-[11px] text-slate-500">{deviceData.colorDepth} TrueColor</p>
+            {/* CPU & Memory */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-amber transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">CPU & HARDWARE THREADS</span>
+              <div className="font-pixel text-base text-arcade-amber">{deviceData.cores}</div>
+              <p className="text-[11px] text-slate-400 font-mono">{deviceData.ram}</p>
             </div>
 
-            <div className="pixel-card p-4 space-y-1 sm:col-span-2">
-              <span className="text-arcade-muted text-[10px] font-pixel">GPU / WEBGL GRAPHICS RENDERER</span>
+            {/* Screen & Display */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-purple transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">DISPLAY & PIXEL METRICS</span>
+              <div className="font-pixel text-sm text-purple-300">{deviceData.screen}</div>
+              <p className="text-[11px] text-slate-400 font-mono">DPR: {deviceData.dpr} • {deviceData.colorDepth}</p>
+            </div>
+
+            {/* Viewport Dimensions */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-blue transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">VIEWPORT WINDOW</span>
+              <div className="font-pixel text-sm text-arcade-blue">{deviceData.viewport}</div>
+              <p className="text-[11px] text-slate-400 font-mono">{deviceData.gamut}</p>
+            </div>
+
+            {/* Network State */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border hover:border-arcade-teal transition-colors">
+              <span className="text-arcade-muted text-[9px] font-pixel block">NETWORK LINK</span>
+              <div className="font-pixel text-sm text-arcade-teal">{deviceData.netType}</div>
+              <p className="text-[11px] text-slate-400 font-mono">{deviceData.online} • {deviceData.rtt}</p>
+            </div>
+
+            {/* GPU Renderer - Span 2 */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border sm:col-span-2">
+              <span className="text-arcade-muted text-[9px] font-pixel block">GRAPHICS ACCELERATOR (GPU)</span>
               <div className="font-mono text-xs text-arcade-emerald truncate font-bold">{deviceData.gpu}</div>
-              <p className="text-[11px] text-slate-500">Direct Hardware Acceleration</p>
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[10px] text-arcade-muted">
+                <span className="px-1.5 py-0.5 bg-deck-bg border border-deck-border">{deviceData.webglVersion}</span>
+                <span className="px-1.5 py-0.5 bg-deck-bg border border-deck-border">{deviceData.webgpu}</span>
+                <span className="px-1.5 py-0.5 bg-deck-bg border border-deck-border">Max Texture: {deviceData.maxTextureSize}</span>
+              </div>
             </div>
 
-            {batteryData && (
-              <div className="pixel-card p-4 space-y-1">
-                <span className="text-arcade-muted text-[10px] font-pixel">BATTERY STATUS</span>
-                <div className="font-pixel text-lg text-arcade-emerald">
-                  {batteryData.level}% {batteryData.charging ? '⚡' : ''}
+            {/* Battery Status */}
+            <div className="pixel-card bg-deck-dark p-4 space-y-1.5 border border-deck-border">
+              <span className="text-arcade-muted text-[9px] font-pixel block">BATTERY & POWER</span>
+              {batteryData ? (
+                <>
+                  <div className="font-pixel text-xl text-arcade-emerald">
+                    {batteryData.level}% {batteryData.charging ? '⚡ CHARGING' : 'DISCHARGING'}
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    {batteryData.charging ? 'AC Power Connected' : 'Running on Internal Battery'}
+                  </p>
+                </>
+              ) : (
+                <div className="font-pixel text-xs text-arcade-muted py-2">
+                  DESKTOP AC (NO BATTERY)
                 </div>
-                <p className="text-[11px] text-slate-500">{batteryData.charging ? 'Charging via AC' : 'On Battery Discharge'}</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -461,8 +598,11 @@ export default function DeviceInfoTools() {
 
       {/* 5. STORAGE & DISK QUOTA */}
       {activeTab === 'storage' && (
-        <div className="max-w-md mx-auto pixel-card p-6 space-y-6 font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-emerald">BROWSER STORAGE & DISK QUOTA</span>
+        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 font-mono text-xs text-center border border-deck-border">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-cyan">STORAGE ESTIMATE & DISK QUOTA</span>
+            <span className="font-pixel text-[8px] text-arcade-emerald">ORIGIN ISOLATED</span>
+          </div>
 
           {storageLoading ? (
             <div className="font-pixel text-xs text-arcade-amber animate-pulse py-8">
@@ -470,32 +610,41 @@ export default function DeviceInfoTools() {
             </div>
           ) : storageData && !storageData.error ? (
             <div className="space-y-4">
-              <div className="p-6 bg-deck-bg border-2 border-black shadow-pixel space-y-2">
-                <div className="font-pixel text-3xl text-arcade-emerald">
-                  {storageData.usageMB} <span className="text-sm">MB USED</span>
+              <div className="p-6 bg-deck-bg border-2 border-black shadow-pixel space-y-3">
+                <div className="font-pixel text-2xl sm:text-3xl text-arcade-emerald">
+                  {storageData.usageStr}
                 </div>
                 <div className="text-arcade-muted text-xs">
-                  OF {storageData.quotaGB} GB ALLOCATED DISK QUOTA ({storageData.percent}%)
+                  OF <strong className="text-white">{storageData.quotaStr}</strong> ALLOCATED STORAGE ({storageData.percent}%)
                 </div>
-                <div className="w-full bg-slate-200 h-3 border border-black mt-3 overflow-hidden">
+                <div className="w-full bg-deck-surface h-3.5 border-2 border-black overflow-hidden p-0.5">
                   <div
-                    className="bg-arcade-emerald h-full"
-                    style={{ width: `${Math.max(1, storageData.percent)}%` }}
+                    className="bg-arcade-emerald h-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(2, storageData.percent))}%` }}
                   />
                 </div>
+                <div className="flex justify-between text-[10px] text-arcade-muted pt-1">
+                  <span>0 B</span>
+                  <span>{storageData.quotaStr}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-deck-bg border border-deck-border text-left space-y-1 text-[11px] text-arcade-muted">
+                <p>• IndexedDB + CacheStorage + ServiceWorker assets</p>
+                <p>• Persistent sandbox storage managed per-origin by browser</p>
               </div>
 
               <button
                 onClick={checkStorage}
-                className="btn-pixel btn-pixel-surface w-full py-2 font-pixel text-[9px] flex items-center justify-center gap-2"
+                className="btn-pixel btn-pixel-cyan w-full py-2.5 font-pixel text-[9px] flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 REFRESH STORAGE QUOTA
               </button>
             </div>
           ) : (
-            <div className="text-arcade-coral text-xs py-4">
-              {storageData?.error || 'Storage estimate unavailable.'}
+            <div className="p-4 bg-deck-bg border border-arcade-coral text-arcade-coral text-xs py-4">
+              {storageData?.error || 'Storage estimate unavailable in private/sandboxed mode.'}
             </div>
           )}
         </div>

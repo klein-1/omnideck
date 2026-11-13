@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Gamepad2, Trophy, RotateCcw, Play, Sparkles, 
-  HelpCircle, CircleDot, Dices, Flag, Bomb, Smile, Frown, Layers, HelpCircle as QuizIcon
+  HelpCircle, CircleDot, Dices, Flag, Bomb, Smile, Frown, Layers, 
+  Grid3X3, Scissors, Award, Type, Check, RefreshCw
 } from 'lucide-react';
 import { playClick, playBeep, playCoin, playError, playSuccess } from '../../audio/soundEffects';
 
@@ -275,22 +276,255 @@ export default function GameTools() {
     playClick();
   };
 
-  // 5. COIN TOSS
+  // 5. COIN TOSS (True CSPRNG & 3D Flip & Streak Tracking)
   const [coinResult, setCoinResult] = useState('HEADS');
   const [tossing, setTossing] = useState(false);
+  const [coinRotation, setCoinRotation] = useState(0);
+  const [coinStats, setCoinStats] = useState({ heads: 0, tails: 0, total: 0, streak: 0, bestStreak: 0 });
+  const [coinHistory, setCoinHistory] = useState([]);
 
   const flipCoin = () => {
+    if (tossing) return;
     setTossing(true);
     playClick();
+
+    // Use Web Crypto CSPRNG
+    const randArr = new Uint8Array(1);
+    window.crypto.getRandomValues(randArr);
+    const isHeads = randArr[0] % 2 === 0;
+    const result = isHeads ? 'HEADS' : 'TAILS';
+
+    // Flip degrees: at least 4 full spins (1440 deg) plus extra half spin if tails
+    const extra = isHeads ? 1440 : 1620;
+    setCoinRotation(prev => prev + extra);
+
     setTimeout(() => {
-      const res = Math.random() > 0.5 ? 'HEADS' : 'TAILS';
-      setCoinResult(res);
+      setCoinResult(result);
       setTossing(false);
+      setCoinStats(prev => {
+        const isCurrentSame = (prev.streak > 0 && isHeads) || (prev.streak < 0 && !isHeads);
+        const newStreak = isHeads ? (prev.streak > 0 ? prev.streak + 1 : 1) : (prev.streak < 0 ? prev.streak - 1 : -1);
+        const bestStreak = Math.max(prev.bestStreak, Math.abs(newStreak));
+        return {
+          heads: prev.heads + (isHeads ? 1 : 0),
+          tails: prev.tails + (isHeads ? 0 : 1),
+          total: prev.total + 1,
+          streak: newStreak,
+          bestStreak
+        };
+      });
+      setCoinHistory(prev => [isHeads ? 'H' : 'T', ...prev.slice(0, 11)]);
       playCoin();
-    }, 600);
+    }, 700);
   };
 
-  // 6. DICE ROLLER
+  const resetCoinStats = () => {
+    setCoinStats({ heads: 0, tails: 0, total: 0, streak: 0, bestStreak: 0 });
+    setCoinHistory([]);
+    playClick();
+  };
+
+  // 6. 2048 RETRO PUZZLE
+  const init2048Grid = () => {
+    const grid = Array(4).fill(null).map(() => Array(4).fill(0));
+    addRandom2048Tile(grid);
+    addRandom2048Tile(grid);
+    return grid;
+  };
+
+  const addRandom2048Tile = (grid) => {
+    const empty = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] === 0) empty.push([r, c]);
+      }
+    }
+    if (empty.length > 0) {
+      const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+      grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+    }
+  };
+
+  const [grid2048, setGrid2048] = useState(init2048Grid);
+  const [score2048, setScore2048] = useState(0);
+  const [bestScore2048, setBestScore2048] = useState(() => {
+    return Number(localStorage.getItem('omnideck_2048_best') || 0);
+  });
+  const [over2048, setOver2048] = useState(false);
+
+  const move2048 = (direction) => {
+    if (over2048) return;
+    let current = grid2048.map(row => [...row]);
+    let moved = false;
+    let gainedScore = 0;
+
+    const slideRow = (row) => {
+      let filtered = row.filter(val => val !== 0);
+      for (let i = 0; i < filtered.length - 1; i++) {
+        if (filtered[i] === filtered[i + 1]) {
+          filtered[i] *= 2;
+          gainedScore += filtered[i];
+          filtered[i + 1] = 0;
+        }
+      }
+      filtered = filtered.filter(val => val !== 0);
+      while (filtered.length < 4) filtered.push(0);
+      return filtered;
+    };
+
+    if (direction === 'LEFT') {
+      for (let r = 0; r < 4; r++) {
+        const newRow = slideRow(current[r]);
+        if (newRow.some((val, c) => val !== current[r][c])) moved = true;
+        current[r] = newRow;
+      }
+    } else if (direction === 'RIGHT') {
+      for (let r = 0; r < 4; r++) {
+        const reversed = [...current[r]].reverse();
+        const newRow = slideRow(reversed).reverse();
+        if (newRow.some((val, c) => val !== current[r][c])) moved = true;
+        current[r] = newRow;
+      }
+    } else if (direction === 'UP') {
+      for (let c = 0; c < 4; c++) {
+        const col = [current[0][c], current[1][c], current[2][c], current[3][c]];
+        const newCol = slideRow(col);
+        for (let r = 0; r < 4; r++) {
+          if (newCol[r] !== current[r][c]) moved = true;
+          current[r][c] = newCol[r];
+        }
+      }
+    } else if (direction === 'DOWN') {
+      for (let c = 0; c < 4; c++) {
+        const col = [current[3][c], current[2][c], current[1][c], current[0][c]];
+        const newCol = slideRow(col);
+        for (let r = 0; r < 4; r++) {
+          if (newCol[3 - r] !== current[r][c]) moved = true;
+          current[r][c] = newCol[3 - r];
+        }
+      }
+    }
+
+    if (moved) {
+      addRandom2048Tile(current);
+      setGrid2048(current);
+      const newScore = score2048 + gainedScore;
+      setScore2048(newScore);
+      if (newScore > bestScore2048) {
+        setBestScore2048(newScore);
+        localStorage.setItem('omnideck_2048_best', String(newScore));
+      }
+      playClick();
+
+      // Check game over
+      let canMove = false;
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          if (current[r][c] === 0) canMove = true;
+          if (r < 3 && current[r][c] === current[r + 1][c]) canMove = true;
+          if (c < 3 && current[r][c] === current[r][c + 1]) canMove = true;
+        }
+      }
+      if (!canMove) {
+        setOver2048(true);
+        playError();
+      }
+    }
+  };
+
+  const reset2048 = () => {
+    setGrid2048(init2048Grid());
+    setScore2048(0);
+    setOver2048(false);
+    playClick();
+  };
+
+  // Keyboard controls for 2048
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (activeTab !== 'g2048') return;
+      if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); move2048('UP'); }
+      if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); move2048('DOWN'); }
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); move2048('LEFT'); }
+      if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); move2048('RIGHT'); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [activeTab, grid2048, over2048]);
+
+  // 7. WORDLE 5-LETTER CYBER WORD GUESS
+  const WORDLE_TARGETS = ['CYBER', 'PIXEL', 'RADAR', 'RETRO', 'LOGIC', 'PULSE', 'SHIELD', 'SPARK', 'ROBOT', 'POWER', 'LASER', 'CHIPS', 'ALPHA', 'CLOUD', 'GAMES'];
+  const [wordleTarget, setWordleTarget] = useState(() => WORDLE_TARGETS[Math.floor(Math.random() * WORDLE_TARGETS.length)]);
+  const [wordleGuesses, setWordleGuesses] = useState([]);
+  const [wordleCurrent, setWordleCurrent] = useState('');
+  const [wordleStatus, setWordleStatus] = useState('PLAYING'); // 'PLAYING' | 'WON' | 'LOST'
+
+  const submitWordleGuess = (e) => {
+    if (e) e.preventDefault();
+    if (wordleStatus !== 'PLAYING') return;
+    const guess = wordleCurrent.trim().toUpperCase();
+    if (guess.length !== 5) {
+      playError();
+      return;
+    }
+
+    const nextGuesses = [...wordleGuesses, guess];
+    setWordleGuesses(nextGuesses);
+    setWordleCurrent('');
+
+    if (guess === wordleTarget) {
+      setWordleStatus('WON');
+      playSuccess();
+    } else if (nextGuesses.length >= 6) {
+      setWordleStatus('LOST');
+      playError();
+    } else {
+      playClick();
+    }
+  };
+
+  const resetWordle = () => {
+    setWordleTarget(WORDLE_TARGETS[Math.floor(Math.random() * WORDLE_TARGETS.length)]);
+    setWordleGuesses([]);
+    setWordleCurrent('');
+    setWordleStatus('PLAYING');
+    playClick();
+  };
+
+  // 8. ROCK PAPER SCISSORS
+  const [rpsPlayerScore, setRpsPlayerScore] = useState(0);
+  const [rpsCpuScore, setRpsCpuScore] = useState(0);
+  const [rpsTies, setRpsTies] = useState(0);
+  const [rpsPlayerChoice, setRpsPlayerChoice] = useState(null);
+  const [rpsCpuChoice, setRpsCpuChoice] = useState(null);
+  const [rpsResultMsg, setRpsResultMsg] = useState('CHOOSE YOUR WEAPON');
+
+  const playRps = (playerPick) => {
+    const choices = ['ROCK', 'PAPER', 'SCISSORS'];
+    const cpuPick = choices[Math.floor(Math.random() * 3)];
+    setRpsPlayerChoice(playerPick);
+    setRpsCpuChoice(cpuPick);
+
+    if (playerPick === cpuPick) {
+      setRpsTies(t => t + 1);
+      setRpsResultMsg('DRAW! PERFECT BALANCE');
+      playClick();
+    } else if (
+      (playerPick === 'ROCK' && cpuPick === 'SCISSORS') ||
+      (playerPick === 'PAPER' && cpuPick === 'ROCK') ||
+      (playerPick === 'SCISSORS' && cpuPick === 'PAPER')
+    ) {
+      setRpsPlayerScore(s => s + 1);
+      setRpsResultMsg('PLAYER VICTORY! +1 POINT');
+      playSuccess();
+    } else {
+      setRpsCpuScore(s => s + 1);
+      setRpsResultMsg('CPU WINS THIS ROUND');
+      playError();
+    }
+  };
+
+  // 9. DICE ROLLER
   const [diceVals, setDiceVals] = useState([6, 6]);
   const rollDice = () => {
     playClick();
@@ -308,9 +542,12 @@ export default function GameTools() {
         {[
           { id: 'snake', label: 'RETRO SNAKE', icon: Gamepad2, activeClass: 'btn-pixel-emerald' },
           { id: 'minesweeper', label: 'MINESWEEPER', icon: Bomb, activeClass: 'btn-pixel-coral' },
+          { id: 'g2048', label: '2048 PUZZLE', icon: Grid3X3, activeClass: 'btn-pixel-amber' },
+          { id: 'wordle', label: 'WORD GUESS', icon: Type, activeClass: 'btn-pixel-lime' },
+          { id: 'rps', label: 'ROCK PAPER SCISSORS', icon: Scissors, activeClass: 'btn-pixel-teal' },
           { id: 'memory', label: 'MEMORY MATCH', icon: Layers, activeClass: 'btn-pixel-purple' },
           { id: 'tictactoe', label: 'TIC TAC TOE', icon: Trophy, activeClass: 'btn-pixel-cyan' },
-          { id: 'cointoss', label: 'COIN TOSS', icon: CircleDot, activeClass: 'btn-pixel-amber' },
+          { id: 'cointoss', label: '3D COIN TOSS', icon: CircleDot, activeClass: 'btn-pixel-orange' },
           { id: 'dice', label: 'DICE ROLLER', icon: Dices, activeClass: 'btn-pixel-pink' },
         ].map(tab => {
           const Icon = tab.icon;
@@ -566,28 +803,316 @@ export default function GameTools() {
         </div>
       )}
 
-      {/* 5. COIN TOSS */}
-      {activeTab === 'cointoss' && (
-        <div className="max-w-xs mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-amber">CHANCE COIN TOSS</span>
-
-          <div className={`w-32 h-32 rounded-full border-4 border-black bg-arcade-amber mx-auto flex items-center justify-center font-pixel text-xl text-black shadow-pixel ${
-            tossing ? 'animate-spin' : ''
-          }`}>
-            {coinResult}
+      {/* 5. 2048 ARCADE PUZZLE */}
+      {activeTab === 'g2048' && (
+        <div className="max-w-sm mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-4 border border-deck-border font-mono text-xs text-center">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-amber">2048 RETRO PUZZLE</span>
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-0.5 bg-deck-bg border border-deck-border text-[9px] font-pixel">
+                SCORE: <span className="text-arcade-emerald">{score2048}</span>
+              </div>
+              <div className="px-2 py-0.5 bg-deck-bg border border-deck-border text-[9px] font-pixel">
+                BEST: <span className="text-arcade-cyan">{bestScore2048}</span>
+              </div>
+            </div>
           </div>
+
+          {/* 4x4 Grid */}
+          <div className="bg-deck-bg p-2.5 border-4 border-black grid grid-cols-4 gap-2 shadow-pixel aspect-square">
+            {grid2048.map((row, r) =>
+              row.map((val, c) => {
+                const getTileColor = (v) => {
+                  if (v === 0) return 'bg-deck-dark/60 text-transparent border-deck-border/40';
+                  if (v === 2) return 'bg-zinc-800 text-slate-100 border-zinc-600';
+                  if (v === 4) return 'bg-amber-950 text-amber-200 border-amber-600';
+                  if (v === 8) return 'bg-orange-600 text-white border-black font-bold';
+                  if (v === 16) return 'bg-rose-600 text-white border-black font-bold';
+                  if (v === 32) return 'bg-purple-600 text-white border-black font-bold';
+                  if (v === 64) return 'bg-cyan-600 text-white border-black font-bold';
+                  if (v === 128) return 'bg-emerald-500 text-black border-black font-bold';
+                  if (v === 256) return 'bg-yellow-400 text-black border-black font-bold';
+                  if (v === 512) return 'bg-pink-500 text-white border-black font-bold';
+                  return 'bg-gradient-to-r from-amber-400 to-rose-500 text-black border-black font-bold shadow-pixel-sm';
+                };
+
+                return (
+                  <div
+                    key={`${r}-${c}`}
+                    className={`border-2 flex items-center justify-center font-pixel text-xs sm:text-sm transition-all duration-100 ${getTileColor(val)}`}
+                  >
+                    {val > 0 ? val : ''}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {over2048 && (
+            <div className="p-2.5 bg-red-950/80 border-2 border-arcade-coral text-arcade-coral font-pixel text-[10px] animate-pulse">
+              GAME OVER! NO MORE MOVES
+            </div>
+          )}
+
+          {/* Mobile / Touch Arrow Pad */}
+          <div className="grid grid-cols-3 gap-2 max-w-[180px] mx-auto pt-1">
+            <div />
+            <button
+              onClick={() => move2048('UP')}
+              className="btn-pixel btn-pixel-surface py-2 font-pixel text-xs text-center"
+            >
+              ▲
+            </button>
+            <div />
+            <button
+              onClick={() => move2048('LEFT')}
+              className="btn-pixel btn-pixel-surface py-2 font-pixel text-xs text-center"
+            >
+              ◀
+            </button>
+            <button
+              onClick={() => move2048('DOWN')}
+              className="btn-pixel btn-pixel-surface py-2 font-pixel text-xs text-center"
+            >
+              ▼
+            </button>
+            <button
+              onClick={() => move2048('RIGHT')}
+              className="btn-pixel btn-pixel-surface py-2 font-pixel text-xs text-center"
+            >
+              ▶
+            </button>
+          </div>
+
+          <button
+            onClick={reset2048}
+            className="btn-pixel btn-pixel-amber w-full py-2.5 font-pixel text-[9px] flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            NEW 2048 GAME
+          </button>
+        </div>
+      )}
+
+      {/* 6. WORDLE 5-LETTER WORD GUESS */}
+      {activeTab === 'wordle' && (
+        <div className="max-w-sm mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-4 border border-deck-border font-mono text-xs text-center">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-lime">WORDLE CYBER-GUESS</span>
+            <span className="text-[9px] font-pixel text-arcade-muted">
+              {wordleGuesses.length} / 6 TRIES
+            </span>
+          </div>
+
+          {/* 6 Rows of 5 Letters */}
+          <div className="space-y-1.5 max-w-[240px] mx-auto">
+            {Array(6).fill(null).map((_, rowIdx) => {
+              const guess = wordleGuesses[rowIdx];
+              const isCurrent = rowIdx === wordleGuesses.length;
+              const letters = guess ? guess.split('') : isCurrent ? wordleCurrent.padEnd(5, ' ').split('') : Array(5).fill(' ');
+
+              return (
+                <div key={rowIdx} className="grid grid-cols-5 gap-1.5">
+                  {letters.map((char, colIdx) => {
+                    let tileColor = 'bg-deck-bg border-deck-border text-white';
+                    if (guess) {
+                      if (guess[colIdx] === wordleTarget[colIdx]) {
+                        tileColor = 'bg-emerald-600 text-white border-black font-bold';
+                      } else if (wordleTarget.includes(guess[colIdx])) {
+                        tileColor = 'bg-amber-500 text-black border-black font-bold';
+                      } else {
+                        tileColor = 'bg-zinc-800 text-slate-400 border-black';
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={colIdx}
+                        className={`w-10 h-10 border-2 flex items-center justify-center font-pixel text-sm uppercase ${tileColor}`}
+                      >
+                        {char.trim()}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          {wordleStatus === 'WON' && (
+            <div className="p-3 bg-emerald-950/80 border-2 border-arcade-emerald text-arcade-emerald font-pixel text-[10px]">
+              🎉 MISSION ACCOMPLISHED! WORD: {wordleTarget}
+            </div>
+          )}
+
+          {wordleStatus === 'LOST' && (
+            <div className="p-3 bg-red-950/80 border-2 border-arcade-coral text-arcade-coral font-pixel text-[10px]">
+              DECRYPT FAILED! WORD WAS: {wordleTarget}
+            </div>
+          )}
+
+          {wordleStatus === 'PLAYING' && (
+            <form onSubmit={submitWordleGuess} className="flex gap-2">
+              <input
+                type="text"
+                maxLength={5}
+                value={wordleCurrent}
+                onChange={(e) => setWordleCurrent(e.target.value.toUpperCase())}
+                placeholder="5-LETTERS"
+                className="flex-1 bg-deck-bg border-2 border-deck-border focus:border-arcade-lime p-2 font-pixel text-center text-sm uppercase"
+              />
+              <button
+                type="submit"
+                disabled={wordleCurrent.trim().length !== 5}
+                className="btn-pixel btn-pixel-lime px-4 py-2 font-pixel text-[9px] disabled:opacity-40"
+              >
+                SUBMIT
+              </button>
+            </form>
+          )}
+
+          <button
+            onClick={resetWordle}
+            className="btn-pixel btn-pixel-surface w-full py-2 font-pixel text-[9px] text-white"
+          >
+            RESET WORDLE
+          </button>
+        </div>
+      )}
+
+      {/* 7. ROCK PAPER SCISSORS */}
+      {activeTab === 'rps' && (
+        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-teal">ROCK • PAPER • SCISSORS</span>
+            <div className="flex items-center gap-2 font-pixel text-[9px]">
+              <span className="text-arcade-emerald">YOU: {rpsPlayerScore}</span>
+              <span className="text-arcade-muted">|</span>
+              <span className="text-arcade-coral">CPU: {rpsCpuScore}</span>
+              <span className="text-arcade-muted">|</span>
+              <span className="text-arcade-cyan">TIE: {rpsTies}</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-deck-bg border-2 border-black shadow-pixel space-y-2">
+            <div className="font-pixel text-xs text-arcade-amber">{rpsResultMsg}</div>
+            <div className="flex items-center justify-around py-3">
+              <div className="space-y-1">
+                <span className="text-[10px] text-arcade-muted font-pixel block">PLAYER</span>
+                <div className="text-4xl">
+                  {rpsPlayerChoice === 'ROCK' ? '🪨' : rpsPlayerChoice === 'PAPER' ? '📄' : rpsPlayerChoice === 'SCISSORS' ? '✂️' : '❓'}
+                </div>
+              </div>
+              <span className="font-pixel text-sm text-arcade-muted">VS</span>
+              <div className="space-y-1">
+                <span className="text-[10px] text-arcade-muted font-pixel block">CPU</span>
+                <div className="text-4xl">
+                  {rpsCpuChoice === 'ROCK' ? '🪨' : rpsCpuChoice === 'PAPER' ? '📄' : rpsCpuChoice === 'SCISSORS' ? '✂️' : '🤖'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'ROCK', emoji: '🪨', label: 'ROCK' },
+              { id: 'PAPER', emoji: '📄', label: 'PAPER' },
+              { id: 'SCISSORS', emoji: '✂️', label: 'SCISSORS' },
+            ].map(w => (
+              <button
+                key={w.id}
+                onClick={() => playRps(w.id)}
+                className="btn-pixel btn-pixel-teal py-3 flex flex-col items-center gap-1 font-pixel text-[9px]"
+              >
+                <span className="text-2xl">{w.emoji}</span>
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 8. 3D COIN TOSS (Real CSPRNG & Streak Statistics) */}
+      {activeTab === 'cointoss' && (
+        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-amber">3D CSPRNG COIN TOSS</span>
+            <button
+              onClick={resetCoinStats}
+              className="text-[9px] text-arcade-coral font-pixel hover:underline"
+            >
+              RESET STATS
+            </button>
+          </div>
+
+          {/* 3D Coin Model */}
+          <div className="py-4 perspective-1000 flex justify-center items-center">
+            <div
+              style={{
+                transform: `rotateY(${coinRotation}deg)`,
+                transition: tossing ? 'transform 0.7s cubic-bezier(0.2, 0.8, 0.3, 1)' : 'none'
+              }}
+              className="w-32 h-32 rounded-full border-4 border-black bg-gradient-to-tr from-amber-500 via-yellow-300 to-amber-600 flex flex-col items-center justify-center font-pixel text-lg text-black shadow-pixel cursor-pointer select-none"
+              onClick={flipCoin}
+            >
+              <span className="text-2xl mb-1">{coinResult === 'HEADS' ? '👑' : '🦅'}</span>
+              <span>{coinResult}</span>
+            </div>
+          </div>
+
+          {/* Statistical Breakdown */}
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            <div className="p-2 bg-deck-bg border border-deck-border">
+              <span className="text-arcade-muted text-[8px] font-pixel block">HEADS</span>
+              <strong className="text-arcade-emerald font-pixel text-sm">{coinStats.heads}</strong>
+            </div>
+            <div className="p-2 bg-deck-bg border border-deck-border">
+              <span className="text-arcade-muted text-[8px] font-pixel block">TAILS</span>
+              <strong className="text-arcade-cyan font-pixel text-sm">{coinStats.tails}</strong>
+            </div>
+            <div className="p-2 bg-deck-bg border border-deck-border">
+              <span className="text-arcade-muted text-[8px] font-pixel block">STREAK</span>
+              <strong className="text-arcade-amber font-pixel text-sm">
+                {Math.abs(coinStats.streak)} {coinStats.streak > 0 ? 'H' : coinStats.streak < 0 ? 'T' : '-'}
+              </strong>
+            </div>
+            <div className="p-2 bg-deck-bg border border-deck-border">
+              <span className="text-arcade-muted text-[8px] font-pixel block">BEST</span>
+              <strong className="text-arcade-coral font-pixel text-sm">{coinStats.bestStreak}</strong>
+            </div>
+          </div>
+
+          {/* History Pill Badges */}
+          {coinHistory.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-[9px] text-arcade-muted font-pixel">RECENT FLIPS:</span>
+              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                {coinHistory.map((h, i) => (
+                  <span
+                    key={i}
+                    className={`w-6 h-6 border font-pixel text-[9px] flex items-center justify-center ${
+                      h === 'H' ? 'bg-amber-400 text-black border-black font-bold' : 'bg-cyan-400 text-black border-black font-bold'
+                    }`}
+                  >
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             onClick={flipCoin}
             disabled={tossing}
             className="btn-pixel btn-pixel-amber w-full py-3 font-pixel text-xs disabled:opacity-50"
           >
-            FLIP COIN
+            {tossing ? 'FLIPPING COIN...' : 'FLIP COIN'}
           </button>
         </div>
       )}
 
-      {/* 6. DICE ROLLER */}
+      {/* 9. DICE ROLLER */}
       {activeTab === 'dice' && (
         <div className="max-w-xs mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
           <span className="font-pixel text-xs text-arcade-emerald">DUAL DICE ROLLER</span>

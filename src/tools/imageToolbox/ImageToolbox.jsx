@@ -59,6 +59,8 @@ export default function ImageToolbox() {
   // Signature
   const sigCanvasRef = useRef(null);
   const [isDrawingSig, setIsDrawingSig] = useState(false);
+  const [sigColor, setSigColor] = useState('#00ff88');
+  const [sigWidth, setSigWidth] = useState(3);
 
   // Canvas refs
   const canvasRef = useRef(null);
@@ -207,30 +209,56 @@ export default function ImageToolbox() {
     playSuccess();
   };
 
-  // Signature canvas handlers
+  // Universal coordinate helper for both touch and mouse events
+  const getSigCoords = (e) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  // Signature canvas handlers (supports desktop mouse and phone touch)
   const startDrawingSig = (e) => {
+    if (e.cancelable && e.type.startsWith('touch')) {
+      e.preventDefault();
+    }
     const canvas = sigCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
+    const { x, y } = getSigCoords(e);
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 3;
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = sigColor;
+    ctx.lineWidth = sigWidth;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     setIsDrawingSig(true);
   };
 
   const drawSig = (e) => {
     if (!isDrawingSig) return;
+    if (e.cancelable && e.type.startsWith('touch')) {
+      e.preventDefault();
+    }
     const canvas = sigCanvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const { x, y } = getSigCoords(e);
+    ctx.lineTo(x, y);
     ctx.stroke();
   };
 
-  const stopDrawingSig = () => {
+  const stopDrawingSig = (e) => {
+    if (e && e.cancelable && e.type.startsWith('touch')) {
+      e.preventDefault();
+    }
     setIsDrawingSig(false);
   };
 
@@ -313,16 +341,63 @@ export default function ImageToolbox() {
             Draw your signature with mouse, stylus, or touch. Automatically exported with transparent alpha background.
           </p>
 
-          <div className="border-2 border-dashed border-arcade-emerald/60 bg-deck-bg p-2 inline-block">
+          {/* Controls: Color & Stroke Width */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-deck-bg border border-deck-border font-mono text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-arcade-muted font-pixel">INK:</span>
+              {[
+                { hex: '#00ff88', label: 'Emerald' },
+                { hex: '#ffffff', label: 'White' },
+                { hex: '#00f0ff', label: 'Cyan' },
+                { hex: '#ffb703', label: 'Amber' },
+                { hex: '#3b82f6', label: 'Blue' },
+                { hex: '#000000', label: 'Black' },
+              ].map(c => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  onClick={() => setSigColor(c.hex)}
+                  style={{ backgroundColor: c.hex }}
+                  className={`w-6 h-6 border-2 transition-transform ${
+                    sigColor === c.hex ? 'border-white scale-125 shadow-pixel-sm' : 'border-black'
+                  }`}
+                  title={c.label}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-arcade-muted font-pixel">WIDTH:</span>
+              {[2, 3, 5, 8].map(w => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setSigWidth(w)}
+                  className={`px-2 py-0.5 font-pixel text-[8px] border ${
+                    sigWidth === w ? 'bg-arcade-emerald text-black border-black font-bold' : 'bg-deck-dark border-deck-border text-arcade-muted'
+                  }`}
+                >
+                  {w}PX
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-2 border-dashed border-arcade-emerald/60 bg-deck-bg p-2 inline-block w-full max-w-full">
             <canvas
               ref={sigCanvasRef}
-              width={600}
-              height={260}
+              width={700}
+              height={300}
               onMouseDown={startDrawingSig}
               onMouseMove={drawSig}
               onMouseUp={stopDrawingSig}
               onMouseLeave={stopDrawingSig}
-              className="cursor-crosshair bg-transparent"
+              onTouchStart={startDrawingSig}
+              onTouchMove={drawSig}
+              onTouchEnd={stopDrawingSig}
+              onTouchCancel={stopDrawingSig}
+              style={{ touchAction: 'none' }}
+              className="cursor-crosshair bg-transparent w-full h-auto max-h-[280px] border border-black/40 block"
             />
           </div>
         </div>
