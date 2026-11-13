@@ -238,11 +238,11 @@ export default function PdfSuite() {
       {/* Sub-navigation */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'merge', label: 'MERGE PDFS', icon: Combine },
-          { id: 'split', label: 'SPLIT / EXTRACT', icon: Scissors },
-          { id: 'rotate', label: 'ROTATE PAGES', icon: RotateCw },
-          { id: 'watermark', label: 'WATERMARK STAMP', icon: Sparkles },
-          { id: 'imgToPdf', label: 'IMAGES TO PDF', icon: Image },
+          { id: 'merge', label: 'MERGE PDFS', icon: Combine, activeClass: 'btn-pixel-purple' },
+          { id: 'split', label: 'SPLIT / EXTRACT', icon: Scissors, activeClass: 'btn-pixel-coral' },
+          { id: 'rotate', label: 'ROTATE PAGES', icon: RotateCw, activeClass: 'btn-pixel-cyan' },
+          { id: 'watermark', label: 'WATERMARK STAMP', icon: Sparkles, activeClass: 'btn-pixel-amber' },
+          { id: 'imgToPdf', label: 'IMAGES TO PDF', icon: Image, activeClass: 'btn-pixel-pink' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -251,7 +251,7 @@ export default function PdfSuite() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); setResultPdfUrl(null); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-amber' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

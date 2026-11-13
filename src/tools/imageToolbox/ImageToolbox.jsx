@@ -258,14 +258,14 @@ export default function ImageToolbox() {
       {/* Sub-tool Selector Bar */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'compress', label: 'COMPRESS & CONVERT', icon: FileImage },
-          { id: 'resize', label: 'RESIZER & CROP', icon: Maximize2 },
-          { id: 'filter', label: 'FILTERS & COLOR', icon: Sliders },
-          { id: 'pixelate', label: '8-BIT PIXEL ART', icon: Sparkles },
-          { id: 'bgRemove', label: 'BG REMOVER', icon: Scissors },
-          { id: 'watermark', label: 'WATERMARK', icon: Type },
-          { id: 'palette', label: 'PALETTE PICKER', icon: Palette },
-          { id: 'signature', label: 'SIGNATURE MAKER', icon: PenTool },
+          { id: 'compress', label: 'COMPRESS & CONVERT', icon: FileImage, activeClass: 'btn-pixel-pink' },
+          { id: 'resize', label: 'RESIZER & CROP', icon: Maximize2, activeClass: 'btn-pixel-cyan' },
+          { id: 'filter', label: 'FILTERS & COLOR', icon: Sliders, activeClass: 'btn-pixel-violet' },
+          { id: 'pixelate', label: '8-BIT PIXEL ART', icon: Sparkles, activeClass: 'btn-pixel-amber' },
+          { id: 'bgRemove', label: 'BG REMOVER', icon: Scissors, activeClass: 'btn-pixel-coral' },
+          { id: 'watermark', label: 'WATERMARK', icon: Type, activeClass: 'btn-pixel-blue' },
+          { id: 'palette', label: 'PALETTE PICKER', icon: Palette, activeClass: 'btn-pixel-purple' },
+          { id: 'signature', label: 'SIGNATURE MAKER', icon: PenTool, activeClass: 'btn-pixel-emerald' },
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeSubTool === t.id;
@@ -274,7 +274,7 @@ export default function ImageToolbox() {
               key={t.id}
               onClick={() => { playClick(); setActiveSubTool(t.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-coral' : 'btn-pixel-surface'
+                isActive ? t.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

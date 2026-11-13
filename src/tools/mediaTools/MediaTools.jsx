@@ -121,8 +121,8 @@ export default function MediaTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'recorder', label: 'AUDIO RECORDER', icon: Mic },
-          { id: 'drawing', label: 'DRAWING BOARD', icon: PenTool },
+          { id: 'recorder', label: 'AUDIO RECORDER', icon: Mic, activeClass: 'btn-pixel-pink' },
+          { id: 'drawing', label: 'DRAWING BOARD', icon: PenTool, activeClass: 'btn-pixel-purple' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -131,7 +131,7 @@ export default function MediaTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-emerald' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

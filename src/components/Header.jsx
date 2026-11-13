@@ -96,21 +96,21 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand / Logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-arcade-emerald flex items-center justify-center border-2 border-black shadow-pixel-sm cursor-pointer hover:bg-emerald-400 transition-colors shrink-0"
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 via-rose-500 to-cyan-400 flex items-center justify-center border-2 border-black shadow-pixel-sm cursor-pointer hover:scale-105 transition-transform shrink-0"
                onClick={() => { playClick(); onOpenCredits(); }}>
-            <Terminal className="w-4 h-4 sm:w-6 sm:h-6 text-deck-dark" />
+            <Terminal className="w-4 h-4 sm:w-6 sm:h-6 text-black" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="font-pixel text-sm sm:text-base md:text-lg tracking-tight text-white whitespace-nowrap">
-                OMNI<span className="text-arcade-emerald">//</span>DECK
+                OMNI<span className="text-arcade-cyan">//</span><span className="text-arcade-amber">DECK</span>
               </span>
-              <span className="hidden sm:inline-block font-mono text-[9px] uppercase px-1.5 py-0.5 bg-deck-surfaceHover text-arcade-amber border border-arcade-amber/40">
-                PRO
+              <span className="hidden sm:inline-block font-mono text-[9px] uppercase px-1.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-400/50 font-bold">
+                PRO MATRIX
               </span>
             </div>
             <p className="hidden xs:block text-[9px] sm:text-[11px] text-arcade-muted font-mono leading-tight whitespace-nowrap">
-              Cyber Deck & Utilities Matrix
+              Vibrant Multi-Suite Cyber Deck
             </p>
           </div>
         </div>
@@ -118,13 +118,13 @@ export default function Header({
         {/* Center Quick Search Trigger */}
         <button
           onClick={() => { playClick(); onOpenSearch(); }}
-          className="hidden md:flex items-center gap-3 bg-deck-bg hover:bg-deck-surfaceHover border-2 border-deck-border hover:border-arcade-emerald px-4 py-1.5 transition-all shadow-pixel-sm text-left group max-w-sm w-full"
+          className="hidden md:flex items-center gap-3 bg-deck-bg hover:bg-deck-surfaceHover border-2 border-deck-border hover:border-arcade-cyan px-4 py-1.5 transition-all shadow-pixel-sm text-left group max-w-sm w-full"
         >
-          <Search className="w-4 h-4 text-arcade-muted group-hover:text-arcade-emerald transition-colors" />
+          <Search className="w-4 h-4 text-arcade-muted group-hover:text-arcade-cyan transition-colors" />
           <span className="text-xs text-arcade-muted group-hover:text-white flex-1 font-mono truncate">
             Search 130+ tools...
           </span>
-          <kbd className="font-pixel text-[8px] bg-deck-surface border border-deck-border px-1.5 py-0.5 text-arcade-amber shrink-0">
+          <kbd className="font-pixel text-[8px] bg-deck-surface border border-arcade-amber/60 px-1.5 py-0.5 text-arcade-amber shrink-0">
             CTRL+K
           </kbd>
         </button>
@@ -133,7 +133,7 @@ export default function Header({
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={() => { playClick(); onOpenSearch(); }}
-            className="md:hidden p-1.5 sm:p-2 bg-deck-surface border border-deck-border text-arcade-paper hover:border-arcade-emerald flex items-center justify-center"
+            className="md:hidden p-1.5 sm:p-2 bg-deck-surface border border-deck-border text-arcade-cyan hover:border-arcade-cyan flex items-center justify-center"
             title="Search Tools"
           >
             <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

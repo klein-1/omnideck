@@ -238,13 +238,13 @@ export default function DateTimeTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'clocks', label: 'ANALOG & DIGITAL CLOCK', icon: Clock },
-          { id: 'epoch', label: 'UNIX TIMESTAMP', icon: Clock },
-          { id: 'stopwatch', label: 'PRECISION STOPWATCH', icon: Watch },
-          { id: 'pomodoro', label: 'POMODORO FOCUS', icon: Hourglass },
-          { id: 'tally', label: 'TALLY COUNTER', icon: Plus },
-          { id: 'zones', label: 'WORLD TIMEZONES', icon: Globe },
-          { id: 'datediff', label: 'DATE DURATION DIFF', icon: CalendarIcon },
+          { id: 'clocks', label: 'ANALOG & DIGITAL CLOCK', icon: Clock, activeClass: 'btn-pixel-teal' },
+          { id: 'epoch', label: 'UNIX TIMESTAMP', icon: Clock, activeClass: 'btn-pixel-amber' },
+          { id: 'stopwatch', label: 'PRECISION STOPWATCH', icon: Watch, activeClass: 'btn-pixel-cyan' },
+          { id: 'pomodoro', label: 'POMODORO FOCUS', icon: Hourglass, activeClass: 'btn-pixel-coral' },
+          { id: 'tally', label: 'TALLY COUNTER', icon: Plus, activeClass: 'btn-pixel-lime' },
+          { id: 'zones', label: 'WORLD TIMEZONES', icon: Globe, activeClass: 'btn-pixel-purple' },
+          { id: 'datediff', label: 'DATE DURATION DIFF', icon: CalendarIcon, activeClass: 'btn-pixel-blue' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -253,7 +253,7 @@ export default function DateTimeTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-emerald' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

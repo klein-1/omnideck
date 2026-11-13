@@ -139,10 +139,10 @@ export default function HumanBenchmark() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'reaction', label: 'REACTION TIME', icon: Zap },
-          { id: 'aim', label: 'AIM TRAINER', icon: Target },
-          { id: 'chimp', label: 'CHIMP TEST', icon: Brain },
-          { id: 'typing', label: 'TYPING TEST', icon: Type },
+          { id: 'reaction', label: 'REACTION TIME', icon: Zap, color: 'btn-pixel-coral' },
+          { id: 'aim', label: 'AIM TRAINER', icon: Target, color: 'btn-pixel-cyan' },
+          { id: 'chimp', label: 'CHIMP TEST', icon: Brain, color: 'btn-pixel-amber' },
+          { id: 'typing', label: 'TYPING TEST', icon: Type, color: 'btn-pixel-purple' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -151,7 +151,7 @@ export default function HumanBenchmark() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-amber' : 'btn-pixel-surface'
+                isActive ? tab.color : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

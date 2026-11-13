@@ -179,13 +179,13 @@ export default function EssentialTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'flashlight', label: 'FLASHLIGHT MODES', icon: Flashlight },
-          { id: 'passgen', label: 'PASSWORD GENERATOR', icon: Key },
-          { id: 'qr', label: 'QR GENERATOR', icon: QrCode },
-          { id: 'dictionary', label: 'DICTIONARY', icon: BookOpen },
-          { id: 'notes', label: 'QUICK NOTES', icon: FileEdit },
-          { id: 'todo', label: 'TO-DO BOARD', icon: CheckSquare },
-          { id: 'shopping', label: 'SHOPPING LIST', icon: ShoppingCart },
+          { id: 'flashlight', label: 'FLASHLIGHT MODES', icon: Flashlight, activeClass: 'btn-pixel-yellow' },
+          { id: 'passgen', label: 'PASSWORD GENERATOR', icon: Key, activeClass: 'btn-pixel-emerald' },
+          { id: 'qr', label: 'QR GENERATOR', icon: QrCode, activeClass: 'btn-pixel-cyan' },
+          { id: 'dictionary', label: 'DICTIONARY', icon: BookOpen, activeClass: 'btn-pixel-blue' },
+          { id: 'notes', label: 'QUICK NOTES', icon: FileEdit, activeClass: 'btn-pixel-orange' },
+          { id: 'todo', label: 'TO-DO BOARD', icon: CheckSquare, activeClass: 'btn-pixel-lime' },
+          { id: 'shopping', label: 'SHOPPING LIST', icon: ShoppingCart, activeClass: 'btn-pixel-pink' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -194,7 +194,7 @@ export default function EssentialTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-amber' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

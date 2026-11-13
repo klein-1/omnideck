@@ -265,13 +265,13 @@ export default function DeviceInfoTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'specs', label: 'HARDWARE & SYSTEM', icon: Cpu },
-          { id: 'fps', label: 'FPS & REFRESH RATE', icon: Activity },
-          { id: 'audiochannel', label: 'AUDIO CHANNELS', icon: Radio },
-          { id: 'keyboard', label: 'KEYBOARD TESTER', icon: Keyboard },
-          { id: 'storage', label: 'STORAGE QUOTA', icon: HardDrive },
-          { id: 'cleaner', label: 'SPEAKER CLEANER', icon: Volume2 },
-          { id: 'deadpixel', label: 'DEAD PIXEL TESTER', icon: Monitor },
+          { id: 'specs', label: 'HARDWARE & SYSTEM', icon: Cpu, activeClass: 'btn-pixel-blue' },
+          { id: 'fps', label: 'FPS & REFRESH RATE', icon: Activity, activeClass: 'btn-pixel-emerald' },
+          { id: 'audiochannel', label: 'AUDIO CHANNELS', icon: Radio, activeClass: 'btn-pixel-purple' },
+          { id: 'keyboard', label: 'KEYBOARD TESTER', icon: Keyboard, activeClass: 'btn-pixel-amber' },
+          { id: 'storage', label: 'STORAGE QUOTA', icon: HardDrive, activeClass: 'btn-pixel-cyan' },
+          { id: 'cleaner', label: 'SPEAKER CLEANER', icon: Volume2, activeClass: 'btn-pixel-teal' },
+          { id: 'deadpixel', label: 'DEAD PIXEL TESTER', icon: Monitor, activeClass: 'btn-pixel-coral' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -279,7 +279,7 @@ export default function DeviceInfoTools() {
             <button
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
-              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? 'btn-pixel-cyan' : 'btn-pixel-surface'
+              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? tab.activeClass : 'btn-pixel-surface'
                 }`}
             >
               <Icon className="w-3.5 h-3.5" />

@@ -176,12 +176,12 @@ export default function FinanceTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'invoice', label: 'INVOICE MAKER', icon: Receipt },
-          { id: 'currency', label: 'CURRENCY CONVERTER', icon: ArrowRightLeft },
-          { id: 'sip', label: 'MUTUAL FUNDS / SIP', icon: TrendingUp },
-          { id: 'emi', label: 'LOAN & EMI CALC', icon: Calculator },
-          { id: 'gst', label: 'GST & TAX SLABS', icon: DollarSign },
-          { id: 'expenses', label: 'EXPENSE TRACKER', icon: Wallet },
+          { id: 'invoice', label: 'INVOICE MAKER', icon: Receipt, activeClass: 'btn-pixel-emerald' },
+          { id: 'currency', label: 'CURRENCY CONVERTER', icon: ArrowRightLeft, activeClass: 'btn-pixel-cyan' },
+          { id: 'sip', label: 'MUTUAL FUNDS / SIP', icon: TrendingUp, activeClass: 'btn-pixel-lime' },
+          { id: 'emi', label: 'LOAN & EMI CALC', icon: Calculator, activeClass: 'btn-pixel-amber' },
+          { id: 'gst', label: 'GST & TAX SLABS', icon: DollarSign, activeClass: 'btn-pixel-purple' },
+          { id: 'expenses', label: 'EXPENSE TRACKER', icon: Wallet, activeClass: 'btn-pixel-coral' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -190,7 +190,7 @@ export default function FinanceTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-emerald' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

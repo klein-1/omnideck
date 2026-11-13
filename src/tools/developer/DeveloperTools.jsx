@@ -219,15 +219,15 @@ return "Sandbox execution complete.";`);
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'code', label: 'CODE SANDBOX', icon: Terminal },
-          { id: 'regex', label: 'REGEX TESTER', icon: Search },
-          { id: 'cssgen', label: 'CSS SHADOW & STYLE', icon: Layers },
-          { id: 'color', label: 'COLOR & CONTRAST', icon: Layers },
-          { id: 'curl', label: 'CURL & API BUILDER', icon: Globe },
-          { id: 'json', label: 'JSON FORMATTER', icon: FileCode },
-          { id: 'hash', label: 'HASH GENERATOR', icon: Hash },
-          { id: 'jwt', label: 'JWT DECODER', icon: Key },
-          { id: 'dns', label: 'DNS LOOKUP', icon: Globe },
+          { id: 'code', label: 'CODE SANDBOX', icon: Terminal, color: 'btn-pixel-lime' },
+          { id: 'regex', label: 'REGEX TESTER', icon: Search, color: 'btn-pixel-cyan' },
+          { id: 'cssgen', label: 'CSS SHADOW & STYLE', icon: Layers, color: 'btn-pixel-orange' },
+          { id: 'color', label: 'COLOR & CONTRAST', icon: Layers, color: 'btn-pixel-pink' },
+          { id: 'curl', label: 'CURL & API BUILDER', icon: Globe, color: 'btn-pixel-blue' },
+          { id: 'json', label: 'JSON FORMATTER', icon: FileCode, color: 'btn-pixel-amber' },
+          { id: 'hash', label: 'HASH GENERATOR', icon: Hash, color: 'btn-pixel-purple' },
+          { id: 'jwt', label: 'JWT DECODER', icon: Key, color: 'btn-pixel-teal' },
+          { id: 'dns', label: 'DNS LOOKUP', icon: Globe, color: 'btn-pixel-emerald' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -235,7 +235,7 @@ return "Sandbox execution complete.";`);
             <button
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
-              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? 'btn-pixel-emerald' : 'btn-pixel-surface'
+              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? tab.color : 'btn-pixel-surface'
                 }`}
             >
               <Icon className="w-3.5 h-3.5" />

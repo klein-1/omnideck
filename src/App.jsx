@@ -169,6 +169,7 @@ export default function App() {
         {/* 1. UNIVERSAL DOWNLOADER */}
         {activeCategory === 'downloader' && (
           <ToolWrapper
+            categoryId="downloader"
             category="UNIVERSAL DOWNLOADER"
             title="SEAL & SPOTIFY STREAM ARCHIVER"
             description="Download pristine 4K video, audio extractions, and Spotify playlists with SponsorBlock & ID3 metadata embedding."
@@ -181,6 +182,7 @@ export default function App() {
         {/* 2. SAFE URL CHECKER */}
         {activeCategory === 'urlChecker' && (
           <ToolWrapper
+            categoryId="urlChecker"
             category="CYBER SECURITY"
             title="SAFE URL AUDIT & UNSHORTENER"
             description="Trace redirect hops, analyze SSL certificates, verify DNS records, and strip surveillance trackers."
@@ -193,6 +195,7 @@ export default function App() {
         {/* 3. SHTTPS LOCAL SERVER */}
         {activeCategory === 'shttps' && (
           <ToolWrapper
+            categoryId="shttps"
             category="LOCAL INFRASTRUCTURE"
             title="SHTTPS // LOCAL SSL/TLS SERVER DECK"
             description="Spawn secure HTTPS or HTTP servers on any local port with auto-generated certificates and mobile LAN QR access."
@@ -205,6 +208,7 @@ export default function App() {
         {/* 4. IMAGE STUDIO (T8RIN) */}
         {activeCategory === 'imageToolbox' && (
           <ToolWrapper
+            categoryId="imageToolbox"
             category="GRAPHICS & MEDIA"
             title="IMAGE TOOLBOX STUDIO // T8RIN"
             description="Compress to WebP/AVIF, crop, grade colors, downsample to 8-bit pixel art, and extract vectorized signatures."
@@ -217,6 +221,7 @@ export default function App() {
         {/* 5. PDF SUITE (PaperKnife) */}
         {activeCategory === 'pdfSuite' && (
           <ToolWrapper
+            categoryId="pdfSuite"
             category="DOCUMENT MATRIX"
             title="PDF SUITE // PAPERKNIFE"
             description="Merge multiple PDFs, extract page slices, rotate orientations, stamp watermarks, and bundle images into PDF."
@@ -229,6 +234,7 @@ export default function App() {
         {/* 6. DATE & TIME */}
         {activeCategory === 'dateTime' && (
           <ToolWrapper
+            categoryId="dateTime"
             category="CHRONOMETRY"
             title="DATE, TIME & INTERVAL CHRONO"
             description="Analog & digital matrix clocks, precision stopwatch with laps, Pomodoro focus intervals, and world timezones."
@@ -241,6 +247,7 @@ export default function App() {
         {/* 7. CALCULATORS */}
         {activeCategory === 'calculators' && (
           <ToolWrapper
+            categoryId="calculators"
             category="MATHEMATICS & GAUGES"
             title="CALCULATORS & STATISTICAL CHARTS"
             description="Scientific calculator, universal unit converter, live ticking age down to seconds, BMI, and pie/bar chart makers."
@@ -253,6 +260,7 @@ export default function App() {
         {/* 8. FINANCE */}
         {activeCategory === 'finance' && (
           <ToolWrapper
+            categoryId="finance"
             category="FINANCIAL SUITE"
             title="INVOICE GENERATOR & FINANCIAL CALCULATORS"
             description="Generate client PDF invoices, convert currencies with live rates, compute SIP growth, and track expenses."
@@ -265,6 +273,7 @@ export default function App() {
         {/* 9. ESSENTIALS */}
         {activeCategory === 'essentials' && (
           <ToolWrapper
+            categoryId="essentials"
             category="DAILY UTILITIES"
             title="ESSENTIALS & EMERGENCY TOOLKIT"
             description="Screen strobe torch, CSPRNG password generator, QR code generator, English dictionary, and to-do board."
@@ -277,6 +286,7 @@ export default function App() {
         {/* 10. MEASUREMENT & SENSORS */}
         {activeCategory === 'measurement' && (
           <ToolWrapper
+            categoryId="measurement"
             category="HARDWARE SENSORS"
             title="MEASUREMENT & INSTRUMENTATION"
             description="Calibrated screen ruler, 180° protractor, spirit bubble level, internet speedometer, decibel meter, and audio oscillator."
@@ -289,6 +299,7 @@ export default function App() {
         {/* 11. TEXT & CRYPTO */}
         {activeCategory === 'textTools' && (
           <ToolWrapper
+            categoryId="textTools"
             category="CRYPTOGRAPHY & STRINGS"
             title="TEXT MATRIX & CIPHER SUITE"
             description="AES-256 encryption, live Markdown previewer, Base64 file encoder, Morse code chirps, and line diff."
@@ -301,6 +312,7 @@ export default function App() {
         {/* 12. MEDIA & AUDIO */}
         {activeCategory === 'media' && (
           <ToolWrapper
+            categoryId="media"
             category="AUDIO & CANVAS"
             title="MEDIA CREATION & RECORDING STUDIO"
             description="Direct microphone WAV audio recorder and cyber pixel drawing board with palette controls."
@@ -313,6 +325,7 @@ export default function App() {
         {/* 13. DEVICE INFO & SYS */}
         {activeCategory === 'deviceInfo' && (
           <ToolWrapper
+            categoryId="deviceInfo"
             category="DIAGNOSTICS"
             title="HARDWARE SPECS & SPEAKER CLEANER"
             description="Direct GPU/CPU/RAM diagnostics, high-frequency water/dust speaker cleaner, and dead pixel screen tester."
@@ -325,6 +338,7 @@ export default function App() {
         {/* 14. ARCADE GAMES */}
         {activeCategory === 'games' && (
           <ToolWrapper
+            categoryId="games"
             category="RECREATION"
             title="RETRO 8-BIT ARCADE SUITE"
             description="Play classic Snake with arrow keys, Minesweeper, Pixel Memory Match, Tic Tac Toe, and chance dice roller."
@@ -337,6 +351,7 @@ export default function App() {
         {/* 15. HEALTH & LIFE */}
         {activeCategory === 'health' && (
           <ToolWrapper
+            categoryId="health"
             category="WELLNESS"
             title="HEALTH, BREATHING & SLEEP CYCLES"
             description="Guided 4-4-4-4 Box Breathing visualizer, daily hydration tracker, and 90-minute REM sleep cycle calculator."
@@ -349,6 +364,7 @@ export default function App() {
         {/* 16. SOCIAL & WEB */}
         {activeCategory === 'social' && (
           <ToolWrapper
+            categoryId="social"
             category="CONNECTIVITY"
             title="SOCIAL & NETWORK UTILITIES"
             description="Direct WhatsApp messenger without saving contacts, Wi-Fi join QR code maker, and social caption generator."
@@ -361,6 +377,7 @@ export default function App() {
         {/* 17. DEV & NETWORK */}
         {activeCategory === 'developer' && (
           <ToolWrapper
+            categoryId="developer"
             category="DEVELOPMENT"
             title="DEVELOPER SANDBOX & NETWORK DECK"
             description="In-browser JavaScript REPL runner, Regex visual tester, CSS shadow generator, JSON formatter, and DNS lookup."
@@ -373,6 +390,7 @@ export default function App() {
         {/* 18. HUMAN BENCHMARK */}
         {activeCategory === 'humanBenchmark' && (
           <ToolWrapper
+            categoryId="humanBenchmark"
             category="COGNITIVE TESTING"
             title="HUMAN BENCHMARK COGNITIVE SUITE"
             description="Reaction time milliseconds benchmark, reflex aim trainer, Chimp working memory grid, and typing speed WPM test."

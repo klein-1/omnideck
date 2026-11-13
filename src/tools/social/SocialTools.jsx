@@ -65,9 +65,9 @@ export default function SocialTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'whatsapp', label: 'WHATSAPP DIRECT', icon: MessageSquare },
-          { id: 'wifi', label: 'QR WI-FI SHARING', icon: Wifi },
-          { id: 'captions', label: 'CAPTION GENERATOR', icon: Sparkles },
+          { id: 'whatsapp', label: 'WHATSAPP DIRECT', icon: MessageSquare, activeClass: 'btn-pixel-emerald' },
+          { id: 'wifi', label: 'QR WI-FI SHARING', icon: Wifi, activeClass: 'btn-pixel-cyan' },
+          { id: 'captions', label: 'CAPTION GENERATOR', icon: Sparkles, activeClass: 'btn-pixel-purple' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -76,7 +76,7 @@ export default function SocialTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-violet' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

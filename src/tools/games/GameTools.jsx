@@ -306,12 +306,12 @@ export default function GameTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'snake', label: 'RETRO SNAKE', icon: Gamepad2 },
-          { id: 'minesweeper', label: 'MINESWEEPER', icon: Bomb },
-          { id: 'memory', label: 'MEMORY MATCH', icon: Layers },
-          { id: 'tictactoe', label: 'TIC TAC TOE', icon: Trophy },
-          { id: 'cointoss', label: 'COIN TOSS', icon: CircleDot },
-          { id: 'dice', label: 'DICE ROLLER', icon: Dices },
+          { id: 'snake', label: 'RETRO SNAKE', icon: Gamepad2, activeClass: 'btn-pixel-emerald' },
+          { id: 'minesweeper', label: 'MINESWEEPER', icon: Bomb, activeClass: 'btn-pixel-coral' },
+          { id: 'memory', label: 'MEMORY MATCH', icon: Layers, activeClass: 'btn-pixel-purple' },
+          { id: 'tictactoe', label: 'TIC TAC TOE', icon: Trophy, activeClass: 'btn-pixel-cyan' },
+          { id: 'cointoss', label: 'COIN TOSS', icon: CircleDot, activeClass: 'btn-pixel-amber' },
+          { id: 'dice', label: 'DICE ROLLER', icon: Dices, activeClass: 'btn-pixel-pink' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -320,7 +320,7 @@ export default function GameTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-amber' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

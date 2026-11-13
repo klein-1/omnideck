@@ -66,10 +66,10 @@ export default function HealthTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'breathe', label: 'BREATHE CONTROL', icon: Heart },
-          { id: 'water', label: 'WATER TRACKER', icon: Droplet },
-          { id: 'sleep', label: 'SLEEP CYCLES', icon: Moon },
-          { id: 'eye', label: '20-20-20 EYE REST', icon: Eye },
+          { id: 'breathe', label: 'BREATHE CONTROL', icon: Heart, activeClass: 'btn-pixel-pink' },
+          { id: 'water', label: 'WATER TRACKER', icon: Droplet, activeClass: 'btn-pixel-blue' },
+          { id: 'sleep', label: 'SLEEP CYCLES', icon: Moon, activeClass: 'btn-pixel-purple' },
+          { id: 'eye', label: '20-20-20 EYE REST', icon: Eye, activeClass: 'btn-pixel-emerald' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -78,7 +78,7 @@ export default function HealthTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-coral' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

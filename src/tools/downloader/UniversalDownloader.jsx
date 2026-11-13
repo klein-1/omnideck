@@ -196,7 +196,7 @@ export default function UniversalDownloader() {
           <button
             onClick={() => { playClick(); setActiveTab('video'); }}
             className={`btn-pixel px-4 py-2 font-pixel text-[10px] flex items-center gap-2 ${
-              activeTab === 'video' ? 'btn-pixel-emerald' : 'btn-pixel-surface'
+              activeTab === 'video' ? 'btn-pixel-coral' : 'btn-pixel-surface'
             }`}
           >
             <Video className="w-3.5 h-3.5" />
@@ -319,10 +319,10 @@ export default function UniversalDownloader() {
               <button
                 type="button"
                 onClick={() => { setType('video'); setFormat('mp4'); setQuality('max'); playClick(); }}
-                className={`px-2 py-1 font-pixel text-[8px] border ${
+                className={`px-2.5 py-1 font-pixel text-[8px] border transition-all ${
                   type === 'video' && format === 'mp4' && quality === 'max'
-                    ? 'bg-arcade-emerald text-black border-black font-bold'
-                    : 'bg-deck-bg border-deck-border text-arcade-muted'
+                    ? 'bg-purple-500 text-white border-black font-bold shadow-pixel-sm'
+                    : 'bg-deck-bg border-deck-border text-purple-400 hover:border-purple-400'
                 }`}
               >
                 4K MAX VIDEO (MP4)
@@ -330,10 +330,10 @@ export default function UniversalDownloader() {
               <button
                 type="button"
                 onClick={() => { setType('video'); setFormat('mp4'); setQuality('1080p'); playClick(); }}
-                className={`px-2 py-1 font-pixel text-[8px] border ${
+                className={`px-2.5 py-1 font-pixel text-[8px] border transition-all ${
                   type === 'video' && format === 'mp4' && quality === '1080p'
-                    ? 'bg-arcade-emerald text-black border-black font-bold'
-                    : 'bg-deck-bg border-deck-border text-arcade-muted'
+                    ? 'bg-cyan-400 text-black border-black font-bold shadow-pixel-sm'
+                    : 'bg-deck-bg border-deck-border text-cyan-400 hover:border-cyan-400'
                 }`}
               >
                 1080P HD (MP4)
@@ -341,10 +341,10 @@ export default function UniversalDownloader() {
               <button
                 type="button"
                 onClick={() => { setType('audio'); setFormat('mp3'); playClick(); }}
-                className={`px-2 py-1 font-pixel text-[8px] border ${
+                className={`px-2.5 py-1 font-pixel text-[8px] border transition-all ${
                   type === 'audio' && format === 'mp3'
-                    ? 'bg-arcade-amber text-black border-black font-bold'
-                    : 'bg-deck-bg border-deck-border text-arcade-muted'
+                    ? 'bg-amber-400 text-black border-black font-bold shadow-pixel-sm'
+                    : 'bg-deck-bg border-deck-border text-amber-400 hover:border-amber-400'
                 }`}
               >
                 320KBPS AUDIO (MP3)
@@ -352,10 +352,10 @@ export default function UniversalDownloader() {
               <button
                 type="button"
                 onClick={() => { setType('audio'); setFormat('wav'); playClick(); }}
-                className={`px-2 py-1 font-pixel text-[8px] border ${
+                className={`px-2.5 py-1 font-pixel text-[8px] border transition-all ${
                   type === 'audio' && format === 'wav'
-                    ? 'bg-arcade-cyan text-black border-black font-bold'
-                    : 'bg-deck-bg border-deck-border text-arcade-muted'
+                    ? 'bg-emerald-400 text-black border-black font-bold shadow-pixel-sm'
+                    : 'bg-deck-bg border-deck-border text-emerald-400 hover:border-emerald-400'
                 }`}
               >
                 LOSSLESS AUDIO (WAV)

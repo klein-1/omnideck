@@ -346,14 +346,14 @@ export default function MeasurementTools() {
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'speedtest', label: 'INTERNET SPEED', icon: Activity },
-          { id: 'ruler', label: 'SCREEN RULER', icon: Ruler },
-          { id: 'protractor', label: 'PROTRACTOR', icon: Compass },
-          { id: 'level', label: 'SPIRIT LEVEL', icon: Gauge },
-          { id: 'decibel', label: 'DECIBEL METER', icon: Mic },
-          { id: 'freq', label: 'FREQ GENERATOR', icon: Radio },
-          { id: 'bpm', label: 'BPM TAPPER', icon: Zap },
-          { id: 'mirror', label: 'MIRROR CAM', icon: Camera },
+          { id: 'speedtest', label: 'INTERNET SPEED', icon: Activity, activeClass: 'btn-pixel-cyan' },
+          { id: 'ruler', label: 'SCREEN RULER', icon: Ruler, activeClass: 'btn-pixel-amber' },
+          { id: 'protractor', label: 'PROTRACTOR', icon: Compass, activeClass: 'btn-pixel-purple' },
+          { id: 'level', label: 'SPIRIT LEVEL', icon: Gauge, activeClass: 'btn-pixel-emerald' },
+          { id: 'decibel', label: 'DECIBEL METER', icon: Mic, activeClass: 'btn-pixel-coral' },
+          { id: 'freq', label: 'FREQ GENERATOR', icon: Radio, activeClass: 'btn-pixel-blue' },
+          { id: 'bpm', label: 'BPM TAPPER', icon: Zap, activeClass: 'btn-pixel-pink' },
+          { id: 'mirror', label: 'MIRROR CAM', icon: Camera, activeClass: 'btn-pixel-teal' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -362,7 +362,7 @@ export default function MeasurementTools() {
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
               className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? 'btn-pixel-coral' : 'btn-pixel-surface'
+                isActive ? tab.activeClass : 'btn-pixel-surface'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

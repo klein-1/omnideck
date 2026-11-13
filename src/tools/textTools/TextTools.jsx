@@ -159,14 +159,14 @@ console.log(deck);
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'crypto', label: 'AES-256 CRYPTO', icon: Lock },
-          { id: 'markdown', label: 'MARKDOWN EDITOR', icon: Eye },
-          { id: 'base64file', label: 'FILE TO BASE64', icon: Binary },
-          { id: 'counter', label: 'TEXT COUNTER', icon: Type },
-          { id: 'morse', label: 'MORSE CODE', icon: Sparkles },
-          { id: 'binary', label: 'BINARY & HEX', icon: Binary },
-          { id: 'tts', label: 'TEXT TO SPEECH', icon: Volume2 },
-          { id: 'diff', label: 'TEXT DIFF CHECKER', icon: FileText },
+          { id: 'crypto', label: 'AES-256 CRYPTO', icon: Lock, activeClass: 'btn-pixel-purple' },
+          { id: 'markdown', label: 'MARKDOWN EDITOR', icon: Eye, activeClass: 'btn-pixel-cyan' },
+          { id: 'base64file', label: 'FILE TO BASE64', icon: Binary, activeClass: 'btn-pixel-blue' },
+          { id: 'counter', label: 'TEXT COUNTER', icon: Type, activeClass: 'btn-pixel-emerald' },
+          { id: 'morse', label: 'MORSE CODE', icon: Sparkles, activeClass: 'btn-pixel-amber' },
+          { id: 'binary', label: 'BINARY & HEX', icon: Binary, activeClass: 'btn-pixel-lime' },
+          { id: 'tts', label: 'TEXT TO SPEECH', icon: Volume2, activeClass: 'btn-pixel-pink' },
+          { id: 'diff', label: 'TEXT DIFF CHECKER', icon: FileText, activeClass: 'btn-pixel-coral' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -174,7 +174,7 @@ console.log(deck);
             <button
               key={tab.id}
               onClick={() => { playClick(); setActiveTab(tab.id); }}
-              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? 'btn-pixel-violet' : 'btn-pixel-surface'
+              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? tab.activeClass : 'btn-pixel-surface'
                 }`}
             >
               <Icon className="w-3.5 h-3.5" />
