@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Type, Lock, Key, Copy, Check, Volume2,
   Sparkles, RefreshCw, FileText, Binary, Eye, Upload,
-  Hash, Shield, Globe, Terminal, Code, Sliders, Cpu
+  Hash, Shield, Globe, Terminal, Code, Sliders, Cpu, Download
 } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 import * as diff from 'diff';
@@ -797,9 +797,25 @@ console.log(deck);
           <div className="pixel-card bg-deck-dark p-4 space-y-2 border border-deck-border">
             <div className="flex justify-between items-center border-b border-deck-border pb-2">
               <span className="font-pixel text-[10px] text-arcade-cyan">MARKDOWN EDITOR</span>
-              <button onClick={() => copyText(mdInput)} className="text-[10px] text-arcade-emerald hover:underline flex items-center gap-1">
-                <Copy className="w-3 h-3" /> COPY MD
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    const blob = new Blob([mdInput], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `omnideck_doc_${Date.now()}.md`;
+                    a.click();
+                    playSuccess();
+                  }}
+                  className="text-[10px] text-arcade-cyan hover:underline flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" /> SAVE .MD
+                </button>
+                <button onClick={() => copyText(mdInput)} className="text-[10px] text-arcade-emerald hover:underline flex items-center gap-1">
+                  <Copy className="w-3 h-3" /> COPY MD
+                </button>
+              </div>
             </div>
             <textarea
               value={mdInput}

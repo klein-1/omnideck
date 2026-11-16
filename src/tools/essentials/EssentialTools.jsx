@@ -444,18 +444,21 @@ export default function EssentialTools() {
           </div>
 
           {qrDataUrl && (
-            <div className="p-3 bg-white border-4 border-black inline-block mx-auto shadow-pixel">
-              <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
+            <div className="space-y-3">
+              <div className="p-3 bg-white border-4 border-black inline-block mx-auto shadow-pixel">
+                <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
+              </div>
+              <div>
+                <a
+                  href={qrDataUrl}
+                  download="omnideck_qr.png"
+                  className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-[9px] inline-flex items-center gap-2"
+                >
+                  SAVE QR IMAGE
+                </a>
+              </div>
             </div>
           )}
-
-          <a
-            href={qrDataUrl}
-            download="omnideck_qr.png"
-            className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-[9px] inline-flex items-center gap-2"
-          >
-            SAVE QR IMAGE
-          </a>
         </div>
       )}
 

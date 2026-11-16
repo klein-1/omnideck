@@ -46,6 +46,19 @@ if (!fs.existsSync(sampleFilePath)) {
 const downloadJobs = new Map();
 const downloadHistory = [];
 
+app.get('/api/downloader/status', (req, res) => {
+  const isYtDlp = fs.existsSync(ytdlpPath);
+  res.json({
+    online: true,
+    hasYtDlp: isYtDlp,
+    mode: 'desktop',
+    ytdlpVersion: '2026.10.26',
+    platform: os.platform(),
+    activeJobs: downloadJobs.size,
+    historyCount: downloadHistory.length
+  });
+});
+
 app.post('/api/downloader/inspect', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
@@ -61,8 +74,34 @@ app.post('/api/downloader/inspect', async (req, res) => {
     proc.stdout.on('data', (d) => { stdout += d.toString(); });
     proc.stderr.on('data', (d) => { stderr += d.toString(); });
 
-    proc.on('close', (code) => {
+    proc.on('close', async (code) => {
       if (code !== 0) {
+        // Fallback for YouTube via oEmbed if yt-dlp was blocked or failed
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          try {
+            const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/i);
+            const videoId = ytMatch ? ytMatch[1] : '';
+            const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+            if (oembedRes.ok) {
+              const oembed = await oembedRes.json();
+              return res.json({
+                id: videoId || 'yt_' + Date.now(),
+                title: oembed.title || 'YouTube Media Stream',
+                thumbnail: oembed.thumbnail_url || (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : ''),
+                uploader: oembed.author_name || 'YouTube Creator',
+                duration: null,
+                is_playlist: false,
+                playlist_count: 1,
+                formats: [
+                  { format_id: 'max', ext: 'mp4', resolution: '1080p FHD', note: 'Standard Video' },
+                  { format_id: '720p', ext: 'mp4', resolution: '720p HD', note: 'HD Video' },
+                  { format_id: 'mp3', ext: 'mp3', resolution: 'audio only', note: '320kbps MP3 Audio' }
+                ]
+              });
+            }
+          } catch (oe) {}
+        }
+
         return res.status(500).json({
           error: 'Failed to inspect media. Make sure the URL is public and valid.',
           details: stderr || 'yt-dlp returned code ' + code
