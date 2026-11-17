@@ -177,13 +177,22 @@ export default function UniversalDownloader() {
     }
   };
 
-  // Start Download
-  const handleStartDownload = async () => {
-    if (!url.trim()) return;
+  // Start Download directly via backend engine
+  const handleStartDownload = async (overrideUrl = null, overrideType = null, overrideFormat = null, overrideQuality = null) => {
+    const targetUrl = (overrideUrl || url || '').trim();
+    if (!targetUrl) return;
     setError(null);
     playClick();
 
-    const cleanUrl = url.trim();
+    const targetType = overrideType || type;
+    const targetFormat = overrideFormat || format;
+    const targetQuality = overrideQuality || quality;
+
+    if (overrideUrl) setUrl(targetUrl);
+    if (overrideType) setType(targetType);
+    if (overrideFormat) setFormat(targetFormat);
+    if (overrideQuality) setQuality(targetQuality);
+
     const cleanTitle = (mediaInfo?.title || 'download').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 50);
 
     try {
@@ -191,10 +200,10 @@ export default function UniversalDownloader() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: cleanUrl,
-          type,
-          quality,
-          format,
+          url: targetUrl,
+          type: targetType,
+          quality: targetQuality,
+          format: targetFormat,
           customArgs,
           startTime,
           endTime,
@@ -207,66 +216,21 @@ export default function UniversalDownloader() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start download');
 
-      // Check if server operates in web/cloud mode (or no local background process)
-      if (data.isWebMode || data.isCloud || data.status === 'completed' || !data.jobId) {
-        const completedJob = {
-          id: data.jobId || 'job_' + Date.now(),
-          status: 'completed',
-          progress: 100,
-          speed: 'Direct Web Stream',
-          eta: '00:00',
-          filename: data.filename || `${cleanTitle}.${format || 'mp4'}`,
-          webDownloadUrl: data.webDownloadUrl || `https://10downloader.com/download?v=${encodeURIComponent(cleanUrl)}`,
-          audioDownloadUrl: data.audioDownloadUrl || `https://dirpy.com/studio?url=${encodeURIComponent(cleanUrl)}`,
-          streamUrl: data.streamUrl || null,
-          isWebMode: true
-        };
-        setCurrentJob(completedJob);
-        saveToLocalHistory({
-          id: completedJob.id,
-          filename: completedJob.filename,
-          type,
-          format,
-          completedAt: new Date().toISOString()
-        });
-        playSuccess();
-        return;
-      }
-
       // Local background worker running
       setCurrentJob({
         id: data.jobId,
         status: data.status || 'starting',
         progress: 0,
-        speed: '',
-        eta: '',
-        filename: data.filename || `${cleanTitle}.${format || 'mp4'}`
+        speed: 'Connecting...',
+        eta: '--:--',
+        filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`
       });
 
       // Poll progress safely
       pollJobProgress(data.jobId);
     } catch (err) {
-      // Direct Web fallback on error
-      const fallbackJob = {
-        id: 'web_' + Date.now(),
-        status: 'completed',
-        progress: 100,
-        speed: 'Direct Web Stream',
-        eta: '00:00',
-        filename: `${cleanTitle}.${format || 'mp4'}`,
-        webDownloadUrl: `https://10downloader.com/download?v=${encodeURIComponent(cleanUrl)}`,
-        audioDownloadUrl: `https://dirpy.com/studio?url=${encodeURIComponent(cleanUrl)}`,
-        isWebMode: true
-      };
-      setCurrentJob(fallbackJob);
-      saveToLocalHistory({
-        id: fallbackJob.id,
-        filename: fallbackJob.filename,
-        type,
-        format,
-        completedAt: new Date().toISOString()
-      });
-      playSuccess();
+      setError(err.message || 'Download process encountered an error. Ensure local server is online.');
+      playError();
     }
   };
 
@@ -292,6 +256,16 @@ export default function UniversalDownloader() {
             clearInterval(interval);
             playSuccess();
             fetchHistory();
+
+            // Auto-trigger native file save
+            try {
+              const dlLink = document.createElement('a');
+              dlLink.href = `/api/downloader/stream/${job.id}`;
+              dlLink.download = (job.filename || 'media_file').replace(new RegExp(`^${job.id}_`), '');
+              document.body.appendChild(dlLink);
+              dlLink.click();
+              dlLink.remove();
+            } catch {}
           } else if (job.status === 'failed') {
             clearInterval(interval);
             setError(job.error || 'Download process encountered an error');
@@ -301,7 +275,7 @@ export default function UniversalDownloader() {
       } catch {
         clearInterval(interval);
       }
-    }, 1000);
+    }, 800);
   };
 
   // Spotify Search
@@ -355,13 +329,13 @@ export default function UniversalDownloader() {
   };
 
   const downloadDirectAudio = (targetUrl, title) => {
+    if (!targetUrl) return;
     setUrl(targetUrl);
     setType('audio');
     setFormat('mp3');
     setActiveTab('video');
-    setTimeout(() => {
-      handleInspect();
-    }, 100);
+    // Start direct MP3 download job immediately
+    handleStartDownload(targetUrl, 'audio', 'mp3', 'max');
   };
 
   const copyToClipboard = (txt) => {
@@ -583,24 +557,22 @@ export default function UniversalDownloader() {
 
                   {/* Direct One-Click Actions */}
                   <div className="pt-2 flex flex-wrap gap-2">
-                    <a
-                      href={`https://10downloader.com/download?v=${encodeURIComponent(url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => handleStartDownload(url, 'video', 'mp4', 'max')}
                       className="btn-pixel btn-pixel-cyan px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      DIRECT 1080P/720P MP4
-                    </a>
-                    <a
-                      href={`https://dirpy.com/studio?url=${encodeURIComponent(url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      <Video className="w-3.5 h-3.5" />
+                      DIRECT 1080P/4K MP4
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStartDownload(url, 'audio', 'mp3', 'max')}
                       className="btn-pixel btn-pixel-amber px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
-                      <Music className="w-3 h-3" />
-                      EXTRACT MP3 AUDIO
-                    </a>
+                      <Music className="w-3.5 h-3.5" />
+                      EXTRACT 320KBPS MP3
+                    </button>
                   </div>
                 </div>
               </div>
@@ -821,42 +793,21 @@ export default function UniversalDownloader() {
                 <div className="pt-3 border-t border-deck-border space-y-3">
                   <div className="flex items-center gap-2 text-arcade-emerald font-pixel text-xs">
                     <CheckCircle2 className="w-4 h-4" />
-                    MEDIA READY: {currentJob?.filename || 'downloaded_media'}
+                    MEDIA READY: {(currentJob?.filename || 'downloaded_media').replace(new RegExp(`^${currentJob?.id}_`), '')}
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {/* Local file download link if processed locally */}
-                    {currentJob.id && !currentJob.isWebMode && (
+                    {/* Direct file download button */}
+                    {currentJob.id && (
                       <a
                         href={`/api/downloader/stream/${currentJob.id}`}
                         download
                         className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-[10px] flex items-center gap-2"
                       >
                         <Download className="w-4 h-4" />
-                        SAVE 4K FILE TO DISK
+                        SAVE FILE TO DISK
                       </a>
                     )}
-
-                    {/* Direct Web Stream Download Buttons */}
-                    <a
-                      href={currentJob.webDownloadUrl || `https://10downloader.com/download?v=${encodeURIComponent(url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-pixel btn-pixel-cyan px-4 py-2 font-pixel text-[10px] flex items-center gap-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      DOWNLOAD 1080P/720P MP4
-                    </a>
-
-                    <a
-                      href={currentJob.audioDownloadUrl || `https://dirpy.com/studio?url=${encodeURIComponent(url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-pixel btn-pixel-amber px-4 py-2 font-pixel text-[10px] flex items-center gap-2"
-                    >
-                      <Music className="w-4 h-4" />
-                      DOWNLOAD MP3 AUDIO
-                    </a>
 
                     <button
                       type="button"
@@ -865,6 +816,17 @@ export default function UniversalDownloader() {
                     >
                       {copiedLink ? <Check className="w-3.5 h-3.5 text-arcade-emerald" /> : <Copy className="w-3.5 h-3.5" />}
                       COPY SOURCE URL
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentJob(null);
+                        setUrl('');
+                      }}
+                      className="btn-pixel btn-pixel-surface px-3 py-2 font-pixel text-[9px] text-arcade-muted hover:text-white"
+                    >
+                      NEW DOWNLOAD
                     </button>
                   </div>
                 </div>

@@ -134,7 +134,7 @@ app.post('/api/url-checker/analyze', async (req, res) => {
         mx: mx.status === 'fulfilled' ? mx.value : [],
         txt: txt.status === 'fulfilled' ? txt.value.flat() : []
       };
-    } catch (e) {}
+    } catch (e) { }
 
     res.json({
       initialUrl: url,
@@ -258,7 +258,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
             ]
           });
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Fallback if oembed times out
       return res.json({
@@ -289,7 +289,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
             formats: [{ format_id: 'max', ext: 'mp4', resolution: 'Highest Available', note: 'Original MP4' }]
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 3. TikTok inspection
@@ -306,7 +306,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
             formats: [{ format_id: 'max', ext: 'mp4', resolution: '1080p', note: 'TikTok HD Video' }]
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 4. Direct video / audio URLs
@@ -364,8 +364,6 @@ app.post('/api/downloader/download', (req, res) => {
     filename: `${cleanTitle}.${format || 'mp4'}`,
     isCloud: true,
     isWebMode: true,
-    webDownloadUrl: `https://10downloader.com/download?v=${encodeURIComponent(cleanUrl)}`,
-    audioDownloadUrl: `https://dirpy.com/studio?url=${encodeURIComponent(cleanUrl)}`,
     streamUrl: isDirect ? cleanUrl : null,
     completedAt: new Date().toISOString()
   };
@@ -421,7 +419,7 @@ app.post('/api/downloader/spotify-search', async (req, res) => {
           const oembed = await oembedRes.json();
           if (oembed.title) cleanQuery = oembed.title;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=music&limit=8`;

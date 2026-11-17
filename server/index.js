@@ -48,9 +48,11 @@ const downloadHistory = [];
 
 app.get('/api/downloader/status', (req, res) => {
   const isYtDlp = fs.existsSync(ytdlpPath);
+  const isFfmpeg = fs.existsSync(path.join(binDir, 'ffmpeg.exe')) || fs.existsSync(path.join(rootDir, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
   res.json({
     online: true,
     hasYtDlp: isYtDlp,
+    hasFfmpeg: isFfmpeg,
     mode: 'desktop',
     ytdlpVersion: '2026.10.26',
     platform: os.platform(),
@@ -66,7 +68,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
   try {
     const isYtDlp = fs.existsSync(ytdlpPath);
     const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
-    const proc = spawn(cmd, ['--dump-single-json', '--no-warnings', '--skip-download', url]);
+    const proc = spawn(cmd, ['--dump-single-json', '--no-warnings', '--no-playlist', '--skip-download', url]);
 
     let stdout = '';
     let stderr = '';
@@ -165,23 +167,39 @@ app.post('/api/downloader/download', (req, res) => {
   const args = [
     '--newline',
     '--no-warnings',
-    '-o', outputFileTemplate,
-    url
+    '--no-playlist',
+    '-o', outputFileTemplate
   ];
+
+  // Point yt-dlp to ffmpeg and ffprobe
+  const localFfmpeg = path.join(binDir, 'ffmpeg.exe');
+  if (fs.existsSync(localFfmpeg)) {
+    args.push('--ffmpeg-location', binDir);
+  } else {
+    try {
+      const nodeFfmpeg = path.join(rootDir, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+      if (fs.existsSync(nodeFfmpeg)) {
+        args.push('--ffmpeg-location', path.dirname(nodeFfmpeg));
+      }
+    } catch (e) {}
+  }
 
   if (type === 'audio') {
     args.push('-x');
     args.push('--audio-format', format || 'mp3');
     args.push('--audio-quality', '0');
+    args.push('--embed-metadata');
   } else {
     if (quality === 'max') {
-      args.push('-f', 'bestvideo+bestaudio/best');
+      args.push('-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best');
     } else if (quality === '1080p') {
-      args.push('-f', 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best');
+      args.push('-f', 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best');
     } else if (quality === '720p') {
-      args.push('-f', 'bestvideo[height<=720]+bestaudio/best[height<=720]/best');
+      args.push('-f', 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best');
     } else if (quality === '480p') {
-      args.push('-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best');
+      args.push('-f', 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best');
+    } else {
+      args.push('-f', 'bestvideo+bestaudio/best');
     }
     if (format === 'mp4') {
       args.push('--merge-output-format', 'mp4');
@@ -205,6 +223,8 @@ app.post('/api/downloader/download', (req, res) => {
     args.push(...extras);
   }
 
+  args.push(url);
+
   const isYtDlp = fs.existsSync(ytdlpPath);
   const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
 
@@ -214,8 +234,8 @@ app.post('/api/downloader/download', (req, res) => {
     type,
     format,
     progress: 0,
-    speed: '',
-    eta: '',
+    speed: 'Connecting...',
+    eta: '--:--',
     status: 'starting',
     filename: null,
     filePath: null,
@@ -236,16 +256,19 @@ app.post('/api/downloader/download', (req, res) => {
       job.speed = match[3];
       job.eta = match[4];
       job.status = 'downloading';
-    } else if (text.includes('[ExtractAudio]') || text.includes('[Merger]')) {
+    } else if (text.includes('[ExtractAudio]') || text.includes('[Merger]') || text.includes('[Fixup')) {
       job.status = 'processing';
       job.progress = 98;
+      job.speed = 'Finalizing';
+      job.eta = '00:01';
     }
 
     // Capture file destination
     const destMatch = text.match(/\[(?:download|Merger|ExtractAudio)\] Destination:\s*(.+)/i) ||
-      text.match(/\[download\]\s+(.+)\s+has already been downloaded/i);
+      text.match(/\[download\]\s+(.+)\s+has already been downloaded/i) ||
+      text.match(/\[Merger\] Merging formats into "([^"]+)"/i);
     if (destMatch && destMatch[1]) {
-      const full = destMatch[1].trim();
+      const full = destMatch[1].trim().replace(/^"/, '').replace(/"$/, '');
       job.filePath = full;
       job.filename = path.basename(full);
     }
@@ -259,23 +282,28 @@ app.post('/api/downloader/download', (req, res) => {
   });
 
   proc.on('close', (code) => {
-    if (code === 0) {
+    // Check if file was created in downloadsDir
+    try {
+      const files = fs.readdirSync(downloadsDir);
+      const found = files.find(f => f.startsWith(jobId));
+      if (found) {
+        job.filePath = path.join(downloadsDir, found);
+        job.filename = found;
+      }
+    } catch (e) {}
+
+    if (code === 0 || (job.filePath && fs.existsSync(job.filePath))) {
       job.status = 'completed';
       job.progress = 100;
+      job.speed = 'Complete';
+      job.eta = '00:00';
 
-      // If filename wasn't caught directly, scan downloadsDir for this jobId
-      if (!job.filePath || !fs.existsSync(job.filePath)) {
-        const found = fs.readdirSync(downloadsDir).find(f => f.startsWith(jobId));
-        if (found) {
-          job.filePath = path.join(downloadsDir, found);
-          job.filename = found;
-        }
-      }
+      const cleanFilename = job.filename ? job.filename.replace(new RegExp(`^${job.id}_`), '') : (job.filename || 'media_file');
 
       downloadHistory.unshift({
         id: job.id,
         url: job.url,
-        filename: job.filename,
+        filename: cleanFilename,
         type: job.type,
         format: job.format,
         completedAt: new Date().toISOString()
@@ -297,12 +325,27 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
 });
 
 app.get('/api/downloader/stream/:jobId', (req, res) => {
-  const job = downloadJobs.get(req.params.jobId);
-  if (!job || !job.filePath || !fs.existsSync(job.filePath)) {
+  const jobId = req.params.jobId;
+  const job = downloadJobs.get(jobId);
+  let filePath = job?.filePath;
+  let filename = job?.filename;
+
+  if (!filePath || !fs.existsSync(filePath)) {
+    try {
+      const found = fs.readdirSync(downloadsDir).find(f => f.startsWith(jobId));
+      if (found) {
+        filePath = path.join(downloadsDir, found);
+        filename = found;
+      }
+    } catch (e) {}
+  }
+
+  if (!filePath || !fs.existsSync(filePath)) {
     return res.status(404).send('File not found or still processing.');
   }
 
-  res.download(job.filePath, job.filename);
+  const cleanName = filename ? filename.replace(new RegExp(`^${jobId}_`), '') : path.basename(filePath);
+  res.download(path.resolve(filePath), cleanName);
 });
 
 app.get('/api/downloader/history', (req, res) => {
