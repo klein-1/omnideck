@@ -168,6 +168,7 @@ app.post('/api/downloader/download', (req, res) => {
     '--newline',
     '--no-warnings',
     '--no-playlist',
+    '--windows-filenames',
     '-o', outputFileTemplate
   ];
 

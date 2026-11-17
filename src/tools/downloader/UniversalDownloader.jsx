@@ -32,6 +32,7 @@ export default function UniversalDownloader() {
   const [currentJob, setCurrentJob] = useState(null);
   const [history, setHistory] = useState([]);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState(false);
 
   // Spotify Search state
   const [spotifyQuery, setSpotifyQuery] = useState('');
@@ -234,6 +235,40 @@ export default function UniversalDownloader() {
     }
   };
 
+  const triggerFileDownload = async (jobId, targetFilename) => {
+    if (!jobId) return;
+    setDownloadingFile(true);
+    playClick();
+
+    const cleanFilename = (targetFilename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
+
+    try {
+      // 1. Fetch blob with direct browser progress
+      const streamRes = await fetch(`/api/downloader/stream/${jobId}`);
+      if (!streamRes.ok) throw new Error(`Stream HTTP ${streamRes.status}`);
+
+      const blob = await streamRes.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = cleanFilename;
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+        link.remove();
+        setDownloadingFile(false);
+      }, 2000);
+      playSuccess();
+    } catch (err) {
+      console.warn('Direct blob save fallback to direct navigation:', err);
+      setDownloadingFile(false);
+      // 2. Direct browser navigation fallback
+      window.location.href = `/api/downloader/stream/${jobId}`;
+    }
+  };
+
   const pollJobProgress = (jobId) => {
     if (!jobId) return;
     const interval = setInterval(async () => {
@@ -256,16 +291,8 @@ export default function UniversalDownloader() {
             clearInterval(interval);
             playSuccess();
             fetchHistory();
-
-            // Auto-trigger native file save
-            try {
-              const dlLink = document.createElement('a');
-              dlLink.href = `/api/downloader/stream/${job.id}`;
-              dlLink.download = (job.filename || 'media_file').replace(new RegExp(`^${job.id}_`), '');
-              document.body.appendChild(dlLink);
-              dlLink.click();
-              dlLink.remove();
-            } catch {}
+            // Automatically trigger native file save
+            triggerFileDownload(job.id, job.filename);
           } else if (job.status === 'failed') {
             clearInterval(interval);
             setError(job.error || 'Download process encountered an error');
@@ -799,13 +826,24 @@ export default function UniversalDownloader() {
                   <div className="flex flex-wrap gap-2">
                     {/* Direct file download button */}
                     {currentJob.id && (
-                      <a
-                        href={`/api/downloader/stream/${currentJob.id}`}
-                        download
-                        className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-[10px] flex items-center gap-2"
+                      <button
+                        type="button"
+                        onClick={() => triggerFileDownload(currentJob.id, currentJob.filename)}
+                        disabled={downloadingFile}
+                        className="btn-pixel btn-pixel-emerald px-5 py-2.5 font-pixel text-[10px] flex items-center gap-2 shadow-lg"
                       >
                         <Download className="w-4 h-4" />
-                        SAVE FILE TO DISK
+                        {downloadingFile ? 'PREPARING & SAVING TO DISK...' : 'SAVE FILE TO DISK NOW'}
+                      </button>
+                    )}
+
+                    {currentJob.id && (
+                      <a
+                        href={`/api/downloader/stream/${currentJob.id}`}
+                        download={(currentJob?.filename || 'download').replace(new RegExp(`^${currentJob?.id}_`), '')}
+                        className="btn-pixel btn-pixel-cyan px-3 py-2 font-pixel text-[9px] flex items-center gap-1.5"
+                      >
+                        DIRECT LINK
                       </a>
                     )}
 
@@ -958,13 +996,13 @@ export default function UniversalDownloader() {
                   </div>
 
                   {item?.id && (
-                    <a
-                      href={`/api/downloader/stream/${item.id}`}
-                      download
+                    <button
+                      type="button"
+                      onClick={() => triggerFileDownload(item.id, item.filename)}
                       className="btn-pixel btn-pixel-surface px-3 py-1 font-pixel text-[8px] text-arcade-emerald hover:border-arcade-emerald shrink-0"
                     >
                       GET FILE
-                    </a>
+                    </button>
                   )}
                 </div>
               ))}

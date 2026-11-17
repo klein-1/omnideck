@@ -3,8 +3,10 @@ import cors from 'cors';
 import dns from 'dns/promises';
 import vm from 'vm';
 import crypto from 'crypto';
+import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
+const ytdl = new Ytdl();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -399,6 +401,64 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
     });
   }
   res.json(job);
+});
+
+app.get('/api/downloader/stream/:jobId', async (req, res) => {
+  const jobId = req.params.jobId;
+  const job = cloudDownloadJobs.get(jobId);
+  const cleanName = (job?.filename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
+
+  if (!job) {
+    return res.status(404).send('Download job not found or expired.');
+  }
+
+  // 1. Direct stream URL
+  if (job.streamUrl) {
+    try {
+      const mediaRes = await fetch(job.streamUrl);
+      if (mediaRes.ok) {
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName)}"`);
+        res.setHeader('Content-Type', mediaRes.headers.get('content-type') || 'application/octet-stream');
+        const buffer = await mediaRes.arrayBuffer();
+        return res.send(Buffer.from(buffer));
+      }
+    } catch (e) {}
+    return res.redirect(job.streamUrl);
+  }
+
+  // 2. Resolve YouTube stream via Ytdl
+  if (job.url && (job.url.includes('youtube.com') || job.url.includes('youtu.be'))) {
+    try {
+      const info = await ytdl.getInfo(job.url);
+      let targetFormat = null;
+      if (job.type === 'audio') {
+        const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
+        targetFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+      } else {
+        const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
+        targetFormat = videoFormats[0];
+      }
+
+      if (targetFormat && targetFormat.url) {
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName)}"`);
+        res.setHeader('Content-Type', targetFormat.mimeType || 'application/octet-stream');
+
+        try {
+          const mediaRes = await fetch(targetFormat.url);
+          if (mediaRes.ok) {
+            const buffer = await mediaRes.arrayBuffer();
+            return res.send(Buffer.from(buffer));
+          }
+        } catch (fetchErr) {}
+
+        return res.redirect(targetFormat.url);
+      }
+    } catch (err) {
+      return res.status(500).send('Stream resolution failed: ' + err.message);
+    }
+  }
+
+  res.status(404).send('No downloadable stream available.');
 });
 
 app.get('/api/downloader/history', (req, res) => {

@@ -13,6 +13,7 @@
     "start": "node server/index.js"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^5.2.1",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
