@@ -531,6 +531,37 @@ async function handleStatelessStream(req, res) {
 
     if (!info || !info.formats || info.formats.length === 0) {
       const isBotCheck = lastError?.message?.includes('not a bot') || lastError?.message?.includes('BOT_CHECK') || lastError?.code === 'BOT_CHECK';
+      if (req.headers.accept?.includes('text/html')) {
+        const localDirectUrl = `http://127.0.0.1:3001/api/downloader/direct-download?url=${encodeURIComponent(targetUrl)}&type=${targetType}&format=${targetFormat}&title=${encodeURIComponent(cleanName)}`;
+        return res.status(403).send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>OmniDeck // Stream BotGuard Alert</title>
+  <style>
+    body { background: #0c0d12; color: #ff5555; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .box { border: 2px solid #ff5555; background: #1a1012; padding: 24px; max-width: 580px; box-shadow: 4px 4px 0px #ff5555; }
+    h2 { margin-top: 0; color: #ff5555; font-size: 16px; letter-spacing: 1px; }
+    p { color: #cccccc; font-size: 13px; line-height: 1.5; }
+    .btn { display: inline-block; padding: 8px 16px; background: #00ffaa; color: #000; text-decoration: none; font-weight: bold; font-family: monospace; border: 2px solid #000; box-shadow: 2px 2px 0px #fff; margin-right: 8px; margin-top: 12px; }
+    .btn-secondary { background: #00ccff; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>// YOUTUBE BOT-GUARD RESTRICTION DETECTED</h2>
+    <p>YouTube blocked cloud datacenter requests with: <i>${lastError?.message || 'Sign in to confirm you are not a bot'}</i>.</p>
+    <p>To download directly using your residential IP (with <b>yt-dlp</b>, <b>Gyan.FFmpeg</b>, and <b>Deno</b>):</p>
+    <div>
+      <a class="btn" href="${localDirectUrl}">DOWNLOAD VIA LOCAL COMPANION (127.0.0.1:3001)</a>
+      <a class="btn btn-secondary" href="http://localhost:5173">OPEN LOCAL APP (LOCALHOST:5173)</a>
+    </div>
+  </div>
+</body>
+</html>
+        `);
+      }
       return res.status(isBotCheck ? 403 : 500).json({
         error: isBotCheck ? 'YOUTUBE_BOT_CHECK' : 'STREAM_RESOLUTION_FAILED',
         message: lastError ? lastError.message : 'No stream formats resolved',

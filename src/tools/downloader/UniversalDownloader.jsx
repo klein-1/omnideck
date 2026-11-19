@@ -583,7 +583,7 @@ export default function UniversalDownloader() {
             {engineStatus.isDesktopLocal || engineStatus.hasYtDlp ? (
               <span className="flex items-center gap-1.5 text-arcade-emerald border border-arcade-emerald/40 px-2 py-0.5 bg-emerald-950/20 hover:border-arcade-emerald">
                 <span className="w-2 h-2 rounded-full bg-arcade-emerald animate-pulse"></span>
-                DESKTOP COMPANION (YT-DLP 4K ONLINE)
+                <span>DESKTOP COMPANION (YT-DLP{engineStatus.hasFfmpeg ? ' + FFMPEG' : ''}{engineStatus.hasDeno ? ' + DENO' : ''})</span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-arcade-cyan border border-arcade-cyan/40 px-2 py-0.5 bg-cyan-950/20 hover:border-arcade-cyan">

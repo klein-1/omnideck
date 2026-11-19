@@ -58,6 +58,99 @@ const hostedPublicDir = path.join(rootDir, 'hosted_files');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// Dynamic WinGet & System Tool Discovery (yt-dlp, Gyan.FFmpeg, DenoLand.Deno, aria2)
+function findWingetPath(pkgPrefix, regex) {
+  const localAppData = process.env.LOCALAPPDATA || '';
+  if (!localAppData) return null;
+  const packagesDir = path.join(localAppData, 'Microsoft', 'WinGet', 'Packages');
+  if (!fs.existsSync(packagesDir)) return null;
+
+  try {
+    const entries = fs.readdirSync(packagesDir);
+    const matchedDir = entries.find(e => e.toLowerCase().startsWith(pkgPrefix.toLowerCase()));
+    if (!matchedDir) return null;
+    const baseDir = path.join(packagesDir, matchedDir);
+
+    function searchRec(current, depth) {
+      if (depth > 4) return null;
+      const items = fs.readdirSync(current, { withFileTypes: true });
+      for (const item of items) {
+        const full = path.join(current, item.name);
+        if (item.isFile() && regex.test(item.name)) return full;
+        if (item.isDirectory()) {
+          const res = searchRec(full, depth + 1);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+    return searchRec(baseDir, 0);
+  } catch (e) {
+    return null;
+  }
+}
+
+function resolveToolPaths() {
+  const wingetYtDlp = findWingetPath('yt-dlp.yt-dlp', /^yt-dlp\.exe$/i);
+  const localYtDlp = path.join(binDir, 'yt-dlp.exe');
+  let ytdlp = (wingetYtDlp && fs.existsSync(wingetYtDlp)) ? wingetYtDlp : (fs.existsSync(localYtDlp) ? localYtDlp : 'yt-dlp');
+
+  const wingetFfmpeg = findWingetPath('Gyan.FFmpeg', /^ffmpeg\.exe$/i);
+  const localFfmpeg = path.join(binDir, 'ffmpeg.exe');
+  const nodeFfmpeg = path.join(rootDir, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+  let ffmpeg = null;
+  let ffmpegDir = null;
+  if (wingetFfmpeg && fs.existsSync(wingetFfmpeg)) {
+    ffmpeg = wingetFfmpeg;
+    ffmpegDir = path.dirname(wingetFfmpeg);
+  } else if (fs.existsSync(localFfmpeg)) {
+    ffmpeg = localFfmpeg;
+    ffmpegDir = binDir;
+  } else if (fs.existsSync(nodeFfmpeg)) {
+    ffmpeg = nodeFfmpeg;
+    ffmpegDir = path.dirname(nodeFfmpeg);
+  }
+
+  const wingetDeno = findWingetPath('DenoLand.Deno', /^deno\.exe$/i);
+  const localDeno = path.join(binDir, 'deno.exe');
+  let deno = null;
+  let denoDir = null;
+  if (wingetDeno && fs.existsSync(wingetDeno)) {
+    deno = wingetDeno;
+    denoDir = path.dirname(wingetDeno);
+  } else if (fs.existsSync(localDeno)) {
+    deno = localDeno;
+    denoDir = binDir;
+  }
+
+  const wingetAria2 = findWingetPath('aria2.aria2', /^aria2c\.exe$/i);
+  const localAria2 = path.join(binDir, 'aria2c.exe');
+  let aria2 = (wingetAria2 && fs.existsSync(wingetAria2)) ? wingetAria2 : (fs.existsSync(localAria2) ? localAria2 : null);
+
+  // Prepend Deno & FFmpeg to PATH so child processes naturally inherit them
+  const pathsToAdd = [denoDir, ffmpegDir].filter(Boolean);
+  if (pathsToAdd.length > 0) {
+    const currentPath = process.env.PATH || '';
+    const toPrepend = pathsToAdd.filter(p => !currentPath.includes(p)).join(path.delimiter);
+    if (toPrepend) {
+      process.env.PATH = `${toPrepend}${path.delimiter}${currentPath}`;
+    }
+  }
+
+  return {
+    ytdlp,
+    hasYtDlp: !!ytdlp && (ytdlp === 'yt-dlp' || fs.existsSync(ytdlp)),
+    ffmpeg,
+    ffmpegDir,
+    hasFfmpeg: !!ffmpeg && fs.existsSync(ffmpeg),
+    deno,
+    denoDir,
+    hasDeno: !!deno && fs.existsSync(deno),
+    aria2,
+    hasAria2: !!aria2 && fs.existsSync(aria2)
+  };
+}
+
 // Create sample file in hostedPublicDir so shttps has files immediately
 const sampleFilePath = path.join(hostedPublicDir, 'welcome.txt');
 if (!fs.existsSync(sampleFilePath)) {
@@ -71,12 +164,17 @@ const downloadJobs = new Map();
 const downloadHistory = [];
 
 app.get('/api/downloader/status', (req, res) => {
-  const isYtDlp = fs.existsSync(ytdlpPath);
-  const isFfmpeg = fs.existsSync(path.join(binDir, 'ffmpeg.exe')) || fs.existsSync(path.join(rootDir, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe'));
+  const tools = resolveToolPaths();
   res.json({
     online: true,
-    hasYtDlp: isYtDlp,
-    hasFfmpeg: isFfmpeg,
+    hasYtDlp: tools.hasYtDlp,
+    hasFfmpeg: tools.hasFfmpeg,
+    hasDeno: tools.hasDeno,
+    hasAria2: tools.hasAria2,
+    ytdlpPath: tools.ytdlp,
+    ffmpegDir: tools.ffmpegDir,
+    denoPath: tools.deno,
+    aria2Path: tools.aria2,
     mode: 'desktop',
     ytdlpVersion: '2026.10.26',
     platform: os.platform(),
@@ -90,9 +188,18 @@ app.post('/api/downloader/inspect', async (req, res) => {
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
-    const isYtDlp = fs.existsSync(ytdlpPath);
-    const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
-    const proc = spawn(cmd, ['--dump-single-json', '--js-runtimes', 'node', '--no-warnings', '--no-playlist', '--skip-download', url]);
+    const tools = resolveToolPaths();
+    const cmd = tools.ytdlp;
+    const inspectArgs = ['--dump-single-json', '--no-warnings', '--no-playlist', '--skip-download'];
+    if (tools.ffmpegDir) inspectArgs.push('--ffmpeg-location', tools.ffmpegDir);
+    if (tools.hasDeno) {
+      inspectArgs.push('--js-runtimes', 'deno,node');
+    } else {
+      inspectArgs.push('--js-runtimes', 'node');
+    }
+    inspectArgs.push(url);
+
+    const proc = spawn(cmd, inspectArgs);
 
     let stdout = '';
     let stderr = '';
@@ -185,6 +292,9 @@ app.post('/api/downloader/download', (req, res) => {
 
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
+  const tools = resolveToolPaths();
+  const cmd = tools.ytdlp;
+
   const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const outputFileTemplate = path.join(downloadsDir, `${jobId}_%(title)s.%(ext)s`);
 
@@ -196,20 +306,14 @@ app.post('/api/downloader/download', (req, res) => {
     '-o', outputFileTemplate
   ];
 
-  // Point yt-dlp to ffmpeg and ffprobe
-  const localFfmpeg = path.join(binDir, 'ffmpeg.exe');
-  if (fs.existsSync(localFfmpeg)) {
-    args.push('--ffmpeg-location', binDir);
-  } else {
-    try {
-      const nodeFfmpeg = path.join(rootDir, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
-      if (fs.existsSync(nodeFfmpeg)) {
-        args.push('--ffmpeg-location', path.dirname(nodeFfmpeg));
-      }
-    } catch (e) { }
+  if (tools.ffmpegDir) {
+    args.push('--ffmpeg-location', tools.ffmpegDir);
   }
-
-  args.push('--js-runtimes', 'node');
+  if (tools.hasDeno) {
+    args.push('--js-runtimes', 'deno,node');
+  } else {
+    args.push('--js-runtimes', 'node');
+  }
 
   if (type === 'audio') {
     args.push('-x');
@@ -251,9 +355,6 @@ app.post('/api/downloader/download', (req, res) => {
   }
 
   args.push(url);
-
-  const isYtDlp = fs.existsSync(ytdlpPath);
-  const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
 
   const job = {
     id: jobId,
@@ -453,6 +554,43 @@ async function handleServerStream(req, res) {
         }
       } catch (err) {
         console.warn('[Server Stream YTDL] Error:', err.message);
+        // Fallback to local yt-dlp on residential IP
+        try {
+          const tools = resolveToolPaths();
+          if (tools.hasYtDlp) {
+            const dlPrefix = `stream_${Date.now()}_`;
+            const outTemplate = path.join(downloadsDir, `${dlPrefix}%(title).45s.%(ext)s`);
+            const dlArgs = [
+              '--no-playlist',
+              '--windows-filenames',
+              '-o', outTemplate
+            ];
+            if (tools.ffmpegDir) dlArgs.push('--ffmpeg-location', tools.ffmpegDir);
+            if (tools.hasDeno) dlArgs.push('--js-runtimes', 'deno,node');
+            if (targetType === 'audio') {
+              dlArgs.push('-x', '--audio-format', targetFormat || 'mp3', '--audio-quality', '0');
+            } else {
+              dlArgs.push('-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best', '--merge-output-format', 'mp4');
+            }
+            dlArgs.push(targetUrl);
+
+            const proc = spawn(tools.ytdlp, dlArgs);
+            await new Promise(resolve => proc.on('close', resolve));
+            const files = fs.readdirSync(downloadsDir);
+            const found = files.find(f => f.startsWith(dlPrefix));
+            if (found) {
+              const fullPath = path.join(downloadsDir, found);
+              const cleanFileName = cleanName || found.replace(dlPrefix, '');
+              return res.download(fullPath, cleanFileName, (downloadErr) => {
+                if (!downloadErr) {
+                  setTimeout(() => { try { fs.unlinkSync(fullPath); } catch (e) {} }, 10000);
+                }
+              });
+            }
+          }
+        } catch (fallbackErr) {
+          console.error('[handleServerStream yt-dlp fallback error]', fallbackErr);
+        }
       }
     }
   }
@@ -471,8 +609,8 @@ app.all(['/api/downloader/direct-download', '/download', '/api/download'], async
 
   if (!url) return res.status(400).send('Error: Video URL is required.');
 
-  const isYtDlp = fs.existsSync(ytdlpPath);
-  const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
+  const tools = resolveToolPaths();
+  const cmd = tools.ytdlp;
 
   const downloadsDir = path.resolve('downloads');
   if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
@@ -482,10 +620,18 @@ app.all(['/api/downloader/direct-download', '/download', '/api/download'], async
 
   const args = [
     '--no-playlist',
-    '--js-runtimes', 'node',
-    '--ffmpeg-location', path.resolve('bin'),
+    '--windows-filenames',
     '-o', outTemplate
   ];
+
+  if (tools.ffmpegDir) {
+    args.push('--ffmpeg-location', tools.ffmpegDir);
+  }
+  if (tools.hasDeno) {
+    args.push('--js-runtimes', 'deno,node');
+  } else {
+    args.push('--js-runtimes', 'node');
+  }
 
   if (type === 'audio') {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
@@ -557,9 +703,18 @@ app.post('/api/downloader/spotify-search', async (req, res) => {
     }
 
     // Inspect search result with yt-dlp
-    const isYtDlp = fs.existsSync(ytdlpPath);
-    const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
-    const proc = spawn(cmd, ['--dump-single-json', '--js-runtimes', 'node', '--default-search', 'ytsearch5', '--no-warnings', searchQuery]);
+    const tools = resolveToolPaths();
+    const cmd = tools.ytdlp;
+    const searchArgs = ['--dump-single-json', '--default-search', 'ytsearch5', '--no-warnings'];
+    if (tools.ffmpegDir) searchArgs.push('--ffmpeg-location', tools.ffmpegDir);
+    if (tools.hasDeno) {
+      searchArgs.push('--js-runtimes', 'deno,node');
+    } else {
+      searchArgs.push('--js-runtimes', 'node');
+    }
+    searchArgs.push(searchQuery);
+
+    const proc = spawn(cmd, searchArgs);
 
     let stdout = '';
     proc.stdout.on('data', d => { stdout += d.toString(); });
