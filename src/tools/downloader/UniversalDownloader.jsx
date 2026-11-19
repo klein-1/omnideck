@@ -565,17 +565,33 @@ export default function UniversalDownloader() {
 
         {/* Engine Status Badge */}
         <div className="flex items-center gap-2 text-[10px] font-mono">
-          {engineStatus.isDesktopLocal || engineStatus.hasYtDlp ? (
-            <span className="flex items-center gap-1.5 text-arcade-emerald border border-arcade-emerald/40 px-2 py-0.5 bg-emerald-950/20">
-              <span className="w-2 h-2 rounded-full bg-arcade-emerald animate-pulse"></span>
-              DESKTOP COMPANION (YT-DLP 4K ONLINE)
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-arcade-cyan border border-arcade-cyan/40 px-2 py-0.5 bg-cyan-950/20">
-              <Cloud className="w-3 h-3 text-arcade-cyan" />
-              CLOUD RESOLVER (VERCEL ENGINE)
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (engineStatus.isDesktopLocal || engineStatus.hasYtDlp) {
+                setApiBase('');
+                setEngineStatus({ online: true, isCloud: true, isDesktopLocal: false, hasYtDlp: false });
+              } else {
+                setApiBase('http://127.0.0.1:3001');
+                setEngineStatus({ online: true, isDesktopLocal: true, hasYtDlp: true, hasFfmpeg: true, mode: 'desktop' });
+              }
+              playClick();
+            }}
+            title="Click to toggle between Local Desktop Engine (127.0.0.1:3001) and Cloud Resolver"
+            className="cursor-pointer"
+          >
+            {engineStatus.isDesktopLocal || engineStatus.hasYtDlp ? (
+              <span className="flex items-center gap-1.5 text-arcade-emerald border border-arcade-emerald/40 px-2 py-0.5 bg-emerald-950/20 hover:border-arcade-emerald">
+                <span className="w-2 h-2 rounded-full bg-arcade-emerald animate-pulse"></span>
+                DESKTOP COMPANION (YT-DLP 4K ONLINE)
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-arcade-cyan border border-arcade-cyan/40 px-2 py-0.5 bg-cyan-950/20 hover:border-arcade-cyan">
+                <Cloud className="w-3 h-3 text-arcade-cyan" />
+                CLOUD RESOLVER (VERCEL ENGINE)
+              </span>
+            )}
+          </button>
           <button
             type="button"
             onClick={checkEngineStatus}
@@ -588,10 +604,37 @@ export default function UniversalDownloader() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-950/60 border-2 border-arcade-coral text-arcade-coral flex items-center gap-3 text-xs font-mono">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          <div className="flex-1">{error}</div>
-          <button onClick={() => setError(null)} className="text-xs font-bold px-2 py-0.5 border border-arcade-coral">
+        <div className="p-3 bg-red-950/60 border-2 border-arcade-coral text-arcade-coral flex items-start gap-3 text-xs font-mono">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-2">
+            <div>{error}</div>
+            {error.includes('BOT-GUARD') && (
+              <div className="pt-1 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApiBase('http://127.0.0.1:3001');
+                    setEngineStatus({ online: true, isDesktopLocal: true, hasYtDlp: true, hasFfmpeg: true, mode: 'desktop' });
+                    setError(null);
+                    playClick();
+                    if (url.trim()) handleMediaDownloaderDirect(url);
+                  }}
+                  className="btn-pixel btn-pixel-emerald px-2.5 py-1 text-[9px] font-pixel text-black font-bold shadow-pixel-sm"
+                >
+                  DOWNLOAD VIA LOCAL DESKTOP COMPANION (127.0.0.1:3001)
+                </button>
+                <a
+                  href="http://localhost:5173"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-pixel btn-pixel-cyan px-2.5 py-1 text-[9px] font-pixel text-black font-bold flex items-center gap-1 shadow-pixel-sm"
+                >
+                  OPEN LOCAL CYBER-DECK (PORT 5173)
+                </a>
+              </div>
+            )}
+          </div>
+          <button onClick={() => setError(null)} className="text-xs font-bold px-2 py-0.5 border border-arcade-coral shrink-0">
             DISMISS
           </button>
         </div>
