@@ -9,10 +9,11 @@ import { Ytdl } from '@distube/ytdl-core';
 const app = express();
 
 // Factory to create unpoisoned Ytdl instances across serverless executions
-function getFreshYtdl(clients = ['tv', 'web_embedded', 'visionos', 'mweb']) {
+function getFreshYtdl(clients = ['tv', 'web_embedded', 'visionos']) {
   const opts = {
     clients,
     timeoutMs: 25000,
+    getPoToken: async () => '', // Completely disables BotGuard worker thread minting on serverless
   };
   if (process.env.YOUTUBE_COOKIE) {
     opts.cookie = process.env.YOUTUBE_COOKIE;
@@ -493,12 +494,11 @@ async function handleStatelessStream(req, res) {
     let info = null;
     let lastError = null;
 
-    // Ordered strategies to avoid bot check challenges on datacenter cloud IP
+    // Ordered strategies with zero PO token requirement (safe for cloud serverless)
     const strategies = [
       ['tv', 'web_embedded'],
       ['web_embedded', 'tv'],
-      ['visionos', 'mweb'],
-      ['mweb', 'web_creator']
+      ['visionos']
     ];
 
     for (const clients of strategies) {

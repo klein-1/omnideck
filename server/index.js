@@ -19,8 +19,12 @@ import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
 
-function getFreshYtdl(clients = ['tv', 'web_embedded', 'visionos', 'mweb']) {
-  const opts = { clients, timeoutMs: 25000 };
+function getFreshYtdl(clients = ['visionos', 'tv', 'web_embedded']) {
+  const opts = {
+    clients,
+    timeoutMs: 25000,
+    getPoToken: async () => ''
+  };
   if (process.env.YOUTUBE_COOKIE) {
     opts.cookie = process.env.YOUTUBE_COOKIE;
   }
@@ -78,7 +82,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
   try {
     const isYtDlp = fs.existsSync(ytdlpPath);
     const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
-    const proc = spawn(cmd, ['--dump-single-json', '--no-warnings', '--no-playlist', '--skip-download', url]);
+    const proc = spawn(cmd, ['--dump-single-json', '--js-runtimes', 'node', '--no-warnings', '--no-playlist', '--skip-download', url]);
 
     let stdout = '';
     let stderr = '';
@@ -195,6 +199,8 @@ app.post('/api/downloader/download', (req, res) => {
     } catch (e) { }
   }
 
+  args.push('--js-runtimes', 'node');
+
   if (type === 'audio') {
     args.push('-x');
     args.push('--audio-format', format || 'mp3');
@@ -232,10 +238,6 @@ app.post('/api/downloader/download', (req, res) => {
   if (customArgs && customArgs.trim()) {
     const extras = customArgs.trim().split(/\s+/);
     args.push(...extras);
-  }
-
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    args.push('--extractor-args', 'youtube:player_client=tv,android_vr,web');
   }
 
   args.push(url);
@@ -459,6 +461,7 @@ app.all(['/api/downloader/direct-download', '/download', '/api/download'], async
 
   const args = [
     '--no-playlist',
+    '--js-runtimes', 'node',
     '--ffmpeg-location', path.resolve('bin'),
     '-o', outTemplate
   ];
@@ -468,10 +471,6 @@ app.all(['/api/downloader/direct-download', '/download', '/api/download'], async
   } else {
     args.push('-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best');
     args.push('--merge-output-format', 'mp4');
-  }
-
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    args.push('--extractor-args', 'youtube:player_client=tv,android_vr,web');
   }
 
   args.push(url);
@@ -539,7 +538,7 @@ app.post('/api/downloader/spotify-search', async (req, res) => {
     // Inspect search result with yt-dlp
     const isYtDlp = fs.existsSync(ytdlpPath);
     const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
-    const proc = spawn(cmd, ['--dump-single-json', '--default-search', 'ytsearch5', '--no-warnings', searchQuery]);
+    const proc = spawn(cmd, ['--dump-single-json', '--js-runtimes', 'node', '--default-search', 'ytsearch5', '--no-warnings', searchQuery]);
 
     let stdout = '';
     proc.stdout.on('data', d => { stdout += d.toString(); });

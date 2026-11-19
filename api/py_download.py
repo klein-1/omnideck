@@ -14,6 +14,11 @@ def download_media(url, is_audio=False):
         'outtmpl': outtmpl,
         'noplaylist': True,
         'quiet': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['visionos', 'tv', 'web']
+            }
+        }
     }
 
     if is_audio:
