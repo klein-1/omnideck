@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Image as ImageIcon, Sliders, Crop, Maximize2, Sparkles, 
-  Trash2, Download, RefreshCw, Eye, EyeOff, Layers, Type, 
+import {
+  Image as ImageIcon, Sliders, Crop, Maximize2, Sparkles,
+  Trash2, Download, RefreshCw, Eye, EyeOff, Layers, Type,
   Palette, FileImage, ShieldCheck, Scissors, PenTool, Check, Copy
 } from 'lucide-react';
 import { playClick, playSuccess, playError } from '../../audio/soundEffects';
@@ -14,9 +14,9 @@ const PALETTES = {
 };
 
 export default function ImageToolbox() {
-  const [activeSubTool, setActiveSubTool] = useState('compress'); 
+  const [activeSubTool, setActiveSubTool] = useState('compress');
   // 'compress' | 'resize' | 'crop' | 'filter' | 'pixelate' | 'bgRemove' | 'exif' | 'watermark' | 'palette' | 'signature' | 'draw'
-  
+
   const [sourceImage, setSourceImage] = useState(null);
   const [sourceName, setSourceName] = useState('');
   const [sourceSize, setSourceSize] = useState(0);
@@ -301,9 +301,8 @@ export default function ImageToolbox() {
             <button
               key={t.id}
               onClick={() => { playClick(); setActiveSubTool(t.id); }}
-              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${
-                isActive ? t.activeClass : 'btn-pixel-surface'
-              }`}
+              className={`btn-pixel px-3 py-1.5 font-pixel text-[9px] flex items-center gap-2 shrink-0 ${isActive ? t.activeClass : 'btn-pixel-surface'
+                }`}
             >
               <Icon className="w-3.5 h-3.5" />
               {t.label}
@@ -358,9 +357,8 @@ export default function ImageToolbox() {
                   type="button"
                   onClick={() => setSigColor(c.hex)}
                   style={{ backgroundColor: c.hex }}
-                  className={`w-6 h-6 border-2 transition-transform ${
-                    sigColor === c.hex ? 'border-white scale-125 shadow-pixel-sm' : 'border-black'
-                  }`}
+                  className={`w-6 h-6 border-2 transition-transform ${sigColor === c.hex ? 'border-white scale-125 shadow-pixel-sm' : 'border-black'
+                    }`}
                   title={c.label}
                 />
               ))}
@@ -373,9 +371,8 @@ export default function ImageToolbox() {
                   key={w}
                   type="button"
                   onClick={() => setSigWidth(w)}
-                  className={`px-2 py-0.5 font-pixel text-[8px] border ${
-                    sigWidth === w ? 'bg-arcade-emerald text-black border-black font-bold' : 'bg-deck-dark border-deck-border text-arcade-muted'
-                  }`}
+                  className={`px-2 py-0.5 font-pixel text-[8px] border ${sigWidth === w ? 'bg-arcade-emerald text-black border-black font-bold' : 'bg-deck-dark border-deck-border text-arcade-muted'
+                    }`}
                 >
                   {w}PX
                 </button>
@@ -559,18 +556,16 @@ export default function ImageToolbox() {
                         <button
                           type="button"
                           onClick={() => setScaleAlgorithm('smooth')}
-                          className={`p-2 font-pixel text-[8px] border ${
-                            scaleAlgorithm === 'smooth' ? 'bg-deck-surface border-arcade-coral text-arcade-coral' : 'bg-deck-bg border-deck-border text-arcade-muted'
-                          }`}
+                          className={`p-2 font-pixel text-[8px] border ${scaleAlgorithm === 'smooth' ? 'bg-deck-surface border-arcade-coral text-arcade-coral' : 'bg-deck-bg border-deck-border text-arcade-muted'
+                            }`}
                         >
                           SMOOTH (BICUBIC)
                         </button>
                         <button
                           type="button"
                           onClick={() => setScaleAlgorithm('pixelated')}
-                          className={`p-2 font-pixel text-[8px] border ${
-                            scaleAlgorithm === 'pixelated' ? 'bg-deck-surface border-arcade-coral text-arcade-coral' : 'bg-deck-bg border-deck-border text-arcade-muted'
-                          }`}
+                          className={`p-2 font-pixel text-[8px] border ${scaleAlgorithm === 'pixelated' ? 'bg-deck-surface border-arcade-coral text-arcade-coral' : 'bg-deck-bg border-deck-border text-arcade-muted'
+                            }`}
                         >
                           NEAREST (PIXEL)
                         </button>

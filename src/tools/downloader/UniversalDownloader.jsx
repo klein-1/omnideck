@@ -198,6 +198,68 @@ export default function UniversalDownloader() {
     }
   };
 
+  // Direct Download via Media-Downloader Pipeline (Native Attachment Download)
+  const handleMediaDownloaderDirect = (targetUrlToDownload = null) => {
+    const rawUrl = (typeof targetUrlToDownload === 'string' && targetUrlToDownload.trim()) ? targetUrlToDownload.trim() : url.trim();
+    if (!rawUrl) return;
+
+    playClick();
+    setError(null);
+
+    const base = apiBase || '';
+    const cleanTitle = (mediaInfo?.title || 'download').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45);
+
+    setCurrentJob({
+      id: `direct_${Date.now()}`,
+      status: 'downloading',
+      progress: 75,
+      speed: 'Direct yt-dlp Stream',
+      eta: 'Saving to disk...',
+      filename: `${cleanTitle}.${format || (type === 'audio' ? 'mp3' : 'mp4')}`,
+      isDirectEngine: true
+    });
+
+    saveToLocalHistory({
+      id: `direct_${Date.now()}`,
+      filename: `${cleanTitle}.${format || (type === 'audio' ? 'mp3' : 'mp4')}`,
+      type,
+      format,
+      completedAt: new Date().toISOString()
+    });
+
+    // Native form submit targeting the hidden iframe so the browser receives the file attachment directly
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `${base}/api/downloader/direct-download`;
+    form.target = 'omnideck_download_frame';
+
+    const urlInput = document.createElement('input');
+    urlInput.type = 'hidden';
+    urlInput.name = 'url';
+    urlInput.value = rawUrl;
+    form.appendChild(urlInput);
+
+    const typeInput = document.createElement('input');
+    typeInput.type = 'hidden';
+    typeInput.name = 'type';
+    typeInput.value = type;
+    form.appendChild(typeInput);
+
+    const fmtInput = document.createElement('input');
+    fmtInput.type = 'hidden';
+    fmtInput.name = 'format';
+    fmtInput.value = format;
+    form.appendChild(fmtInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => {
+      form.remove();
+      playSuccess();
+      setCurrentJob(prev => prev ? { ...prev, status: 'completed', progress: 100 } : null);
+    }, 2500);
+  };
+
   // Start Download directly via backend engine
   const handleStartDownload = async (overrideUrl = null, overrideType = null, overrideFormat = null, overrideQuality = null) => {
     // Avoid React event objects being interpreted as string URLs
@@ -669,19 +731,19 @@ export default function UniversalDownloader() {
                   <div className="pt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => handleStartDownload(url, 'video', 'mp4', 'max')}
+                      onClick={() => { setType('video'); setFormat('mp4'); handleMediaDownloaderDirect(url); }}
                       className="btn-pixel btn-pixel-cyan px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
                       <Video className="w-3.5 h-3.5" />
-                      DIRECT 1080P/4K MP4
+                      DOWNLOAD VIDEO (MP4)
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleStartDownload(url, 'audio', 'mp3', 'max')}
+                      onClick={() => { setType('audio'); setFormat('mp3'); handleMediaDownloaderDirect(url); }}
                       className="btn-pixel btn-pixel-amber px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
                       <Music className="w-3.5 h-3.5" />
-                      EXTRACT 320KBPS MP3
+                      EXTRACT AUDIO (MP3)
                     </button>
                   </div>
                 </div>
@@ -864,16 +926,19 @@ export default function UniversalDownloader() {
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={handleStartDownload}
+                  onClick={() => handleMediaDownloaderDirect()}
                   disabled={!url.trim() || (currentJob && (currentJob.status === 'downloading' || currentJob.status === 'starting'))}
-                  className="btn-pixel btn-pixel-emerald w-full py-3.5 font-pixel text-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="btn-pixel btn-pixel-emerald w-full py-3.5 font-pixel text-xs flex items-center justify-center gap-2 disabled:opacity-50 shadow-pixel"
                 >
                   <Download className="w-4 h-4" />
-                  INITIATE DOWNLOAD
+                  DOWNLOAD NOW (DIRECT ATTACHMENT)
                 </button>
               </div>
             </div>
           </div>
+
+          {/* Hidden Iframe for Direct Media-Downloader Stream without navigation */}
+          <iframe name="omnideck_download_frame" id="omnideck_download_frame" className="hidden" title="Download Engine Frame"></iframe>
 
           {/* Active Job Progress Deck */}
           {currentJob && (

@@ -575,6 +575,21 @@ async function handleStatelessStream(req, res) {
 app.get('/api/downloader/stream/:jobId', handleStatelessStream);
 app.get('/api/downloader/stream', handleStatelessStream);
 
+// Direct Download handler (single-request Media-Downloader architecture)
+app.all(['/api/downloader/direct-download', '/download'], async (req, res) => {
+  const url = (req.body?.url || req.query?.url || '').trim();
+  const type = req.body?.type || req.query?.type || 'video';
+  const format = req.body?.format || req.query?.format || (type === 'audio' ? 'mp3' : 'mp4');
+
+  if (!url) return res.status(400).send('Error: Video URL is required.');
+
+  req.query = req.query || {};
+  req.query.url = url;
+  req.query.type = type;
+  req.query.format = format;
+  return handleStatelessStream(req, res);
+});
+
 app.get('/api/downloader/history', (req, res) => {
   res.json(cloudDownloadHistory);
 });

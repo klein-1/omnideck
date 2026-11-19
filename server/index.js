@@ -111,7 +111,7 @@ app.post('/api/downloader/inspect', async (req, res) => {
                 ]
               });
             }
-          } catch (oe) {}
+          } catch (oe) { }
         }
 
         return res.status(500).json({
@@ -192,7 +192,7 @@ app.post('/api/downloader/download', (req, res) => {
       if (fs.existsSync(nodeFfmpeg)) {
         args.push('--ffmpeg-location', path.dirname(nodeFfmpeg));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (type === 'audio') {
@@ -305,7 +305,7 @@ app.post('/api/downloader/download', (req, res) => {
         job.filePath = path.join(downloadsDir, found);
         job.filename = found;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (code === 0 || (job.filePath && fs.existsSync(job.filePath))) {
       job.status = 'completed';
@@ -358,7 +358,7 @@ async function handleServerStream(req, res) {
         filePath = path.join(downloadsDir, found);
         filename = found;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (filePath && fs.existsSync(filePath)) {
@@ -375,7 +375,7 @@ async function handleServerStream(req, res) {
       targetType = decoded.t || targetType;
       targetFormat = decoded.f || targetFormat;
       cleanName = decoded.n || cleanName;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // 3. Fallback query parameters or decoded token query
@@ -386,7 +386,7 @@ async function handleServerStream(req, res) {
       targetType = decoded.t || targetType;
       targetFormat = decoded.f || targetFormat;
       cleanName = decoded.n || cleanName;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (targetUrl) {
@@ -398,12 +398,12 @@ async function handleServerStream(req, res) {
         let targetStreamFormat = null;
         if (targetType === 'audio') {
           const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
-          targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0] ||
+          targetStreamFormat = audioFormats.sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0] ||
             info.formats.filter(f => f.hasAudio && f.url)[0];
         } else {
           const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
           if (muxed.length > 0) {
-            targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
+            targetStreamFormat = muxed.sort((a, b) => (b.height || 0) - (a.height || 0))[0];
           } else {
             const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
             targetStreamFormat = videoFormats[0] || info.formats.filter(f => f.url)[0];
@@ -439,6 +439,70 @@ async function handleServerStream(req, res) {
 
 app.get('/api/downloader/stream/:jobId', handleServerStream);
 app.get('/api/downloader/stream', handleServerStream);
+
+// Direct Download (Media-Downloader architecture: single request -> native file attachment)
+app.all(['/api/downloader/direct-download', '/download', '/api/download'], async (req, res) => {
+  const url = (req.body?.url || req.query?.url || '').trim();
+  const type = req.body?.type || req.query?.type || 'video';
+  const format = req.body?.format || req.query?.format || (type === 'audio' ? 'mp3' : 'mp4');
+
+  if (!url) return res.status(400).send('Error: Video URL is required.');
+
+  const isYtDlp = fs.existsSync(ytdlpPath);
+  const cmd = isYtDlp ? ytdlpPath : 'yt-dlp';
+
+  const downloadsDir = path.resolve('downloads');
+  if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
+
+  const dlPrefix = `direct_${Date.now()}_`;
+  const outTemplate = path.join(downloadsDir, `${dlPrefix}%(title).45s.%(ext)s`);
+
+  const args = [
+    '--no-playlist',
+    '--ffmpeg-location', path.resolve('bin'),
+    '-o', outTemplate
+  ];
+
+  if (type === 'audio') {
+    args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
+  } else {
+    args.push('-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best');
+    args.push('--merge-output-format', 'mp4');
+  }
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    args.push('--extractor-args', 'youtube:player_client=tv,android_vr,web');
+  }
+
+  args.push(url);
+
+  console.log(`[Media-Downloader] Direct download initiated: ${url}`);
+  const proc = spawn(cmd, args);
+  let stderr = '';
+
+  proc.stderr.on('data', d => { stderr += d.toString(); });
+
+  proc.on('close', code => {
+    try {
+      const files = fs.readdirSync(downloadsDir);
+      const found = files.find(f => f.startsWith(dlPrefix));
+      if (found) {
+        const fullPath = path.join(downloadsDir, found);
+        const cleanName = found.replace(dlPrefix, '');
+        console.log(`[Media-Downloader] File saved: ${cleanName}. Streaming attachment.`);
+        return res.download(fullPath, cleanName, err => {
+          if (!err) {
+            setTimeout(() => { try { fs.unlinkSync(fullPath); } catch (e) {} }, 10000);
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[Media-Downloader] Error finding file:', e);
+    }
+
+    res.status(500).send(`Download failed: yt-dlp exited with code ${code}. ${stderr.slice(-300)}`);
+  });
+});
 
 app.get('/api/downloader/history', (req, res) => {
   res.json(downloadHistory);
