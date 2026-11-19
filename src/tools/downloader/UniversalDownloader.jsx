@@ -199,15 +199,20 @@ export default function UniversalDownloader() {
   };
 
   // Direct Download via Media-Downloader Pipeline (Native Attachment Download)
-  const handleMediaDownloaderDirect = (targetUrlToDownload = null) => {
+  const handleMediaDownloaderDirect = (targetUrlToDownload = null, overrideType = null, overrideFormat = null) => {
     const rawUrl = (typeof targetUrlToDownload === 'string' && targetUrlToDownload.trim()) ? targetUrlToDownload.trim() : url.trim();
     if (!rawUrl) return;
+
+    const activeType = (typeof overrideType === 'string' && overrideType) ? overrideType : type;
+    const activeFormat = (typeof overrideFormat === 'string' && overrideFormat) ? overrideFormat : (format || (activeType === 'audio' ? 'mp3' : 'mp4'));
 
     playClick();
     setError(null);
 
     const base = apiBase || '';
     const cleanTitle = (mediaInfo?.title || 'download').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45);
+    const filename = `${cleanTitle}.${activeFormat}`;
+    const directStreamUrl = `${base}/api/downloader/stream?url=${encodeURIComponent(rawUrl)}&type=${encodeURIComponent(activeType)}&format=${encodeURIComponent(activeFormat)}&title=${encodeURIComponent(cleanTitle)}`;
 
     setCurrentJob({
       id: `direct_${Date.now()}`,
@@ -215,22 +220,24 @@ export default function UniversalDownloader() {
       progress: 75,
       speed: 'Direct yt-dlp Stream',
       eta: 'Saving to disk...',
-      filename: `${cleanTitle}.${format || (type === 'audio' ? 'mp3' : 'mp4')}`,
+      filename,
+      streamUrl: directStreamUrl,
       isDirectEngine: true
     });
 
     saveToLocalHistory({
       id: `direct_${Date.now()}`,
-      filename: `${cleanTitle}.${format || (type === 'audio' ? 'mp3' : 'mp4')}`,
-      type,
-      format,
+      filename,
+      type: activeType,
+      format: activeFormat,
+      streamUrl: directStreamUrl,
       completedAt: new Date().toISOString()
     });
 
     // Native form submit targeting the hidden iframe so the browser receives the file attachment directly
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `${base}/api/downloader/direct-download`;
+    form.action = `${base}/api/downloader/direct-download?url=${encodeURIComponent(rawUrl)}&type=${encodeURIComponent(activeType)}&format=${encodeURIComponent(activeFormat)}&title=${encodeURIComponent(cleanTitle)}`;
     form.target = 'omnideck_download_frame';
 
     const urlInput = document.createElement('input');
@@ -242,21 +249,27 @@ export default function UniversalDownloader() {
     const typeInput = document.createElement('input');
     typeInput.type = 'hidden';
     typeInput.name = 'type';
-    typeInput.value = type;
+    typeInput.value = activeType;
     form.appendChild(typeInput);
 
     const fmtInput = document.createElement('input');
     fmtInput.type = 'hidden';
     fmtInput.name = 'format';
-    fmtInput.value = format;
+    fmtInput.value = activeFormat;
     form.appendChild(fmtInput);
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'hidden';
+    titleInput.name = 'title';
+    titleInput.value = cleanTitle;
+    form.appendChild(titleInput);
 
     document.body.appendChild(form);
     form.submit();
     setTimeout(() => {
       form.remove();
       playSuccess();
-      setCurrentJob(prev => prev ? { ...prev, status: 'completed', progress: 100 } : null);
+      setCurrentJob(prev => prev ? { ...prev, status: 'completed', progress: 100, streamUrl: directStreamUrl } : null);
     }, 2500);
   };
 
@@ -355,7 +368,12 @@ export default function UniversalDownloader() {
 
     const cleanFilename = String(targetFilename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
     const base = apiBase || '';
-    const streamEndpoint = explicitStreamUrl || `${base}/api/downloader/stream/${jobId}`;
+    let streamEndpoint = explicitStreamUrl || `${base}/api/downloader/stream/${jobId}`;
+    const targetMediaUrl = url.trim();
+    if (targetMediaUrl && !streamEndpoint.includes('url=')) {
+      const sep = streamEndpoint.includes('?') ? '&' : '?';
+      streamEndpoint += `${sep}url=${encodeURIComponent(targetMediaUrl)}&type=${type}&format=${format}&title=${encodeURIComponent(cleanFilename)}`;
+    }
 
     try {
       // 1. Fetch blob with direct browser progress
@@ -731,7 +749,7 @@ export default function UniversalDownloader() {
                   <div className="pt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => { setType('video'); setFormat('mp4'); handleMediaDownloaderDirect(url); }}
+                      onClick={() => { setType('video'); setFormat('mp4'); handleMediaDownloaderDirect(url, 'video', 'mp4'); }}
                       className="btn-pixel btn-pixel-cyan px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
                       <Video className="w-3.5 h-3.5" />
@@ -739,7 +757,7 @@ export default function UniversalDownloader() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setType('audio'); setFormat('mp3'); handleMediaDownloaderDirect(url); }}
+                      onClick={() => { setType('audio'); setFormat('mp3'); handleMediaDownloaderDirect(url, 'audio', 'mp3'); }}
                       className="btn-pixel btn-pixel-amber px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1.5"
                     >
                       <Music className="w-3.5 h-3.5" />
@@ -976,7 +994,10 @@ export default function UniversalDownloader() {
                     {currentJob.id && (
                       <button
                         type="button"
-                        onClick={() => triggerFileDownload(currentJob.id, currentJob.filename, currentJob.streamUrl)}
+                        onClick={() => {
+                          const targetStream = currentJob.streamUrl || `${apiBase}/api/downloader/stream?url=${encodeURIComponent(url || currentJob.url || '')}&type=${currentJob.type || type}&format=${currentJob.format || format}&title=${encodeURIComponent(currentJob.filename || 'media')}`;
+                          triggerFileDownload(currentJob.id, currentJob.filename, targetStream);
+                        }}
                         disabled={downloadingFile}
                         className="btn-pixel btn-pixel-emerald px-5 py-2.5 font-pixel text-[10px] flex items-center gap-2 shadow-lg"
                       >
@@ -987,7 +1008,7 @@ export default function UniversalDownloader() {
 
                     {currentJob.id && (
                       <a
-                        href={currentJob.streamUrl || `${apiBase}/api/downloader/stream/${currentJob.id}`}
+                        href={currentJob.streamUrl || `${apiBase}/api/downloader/stream?url=${encodeURIComponent(url || currentJob.url || '')}&type=${currentJob.type || type}&format=${currentJob.format || format}&title=${encodeURIComponent(currentJob.filename || 'media')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn-pixel btn-pixel-cyan px-3 py-2 font-pixel text-[9px] flex items-center gap-1.5"
@@ -1149,7 +1170,10 @@ export default function UniversalDownloader() {
                     {item?.id && (
                       <button
                         type="button"
-                        onClick={() => triggerFileDownload(item.id, item.filename, item.streamUrl)}
+                        onClick={() => {
+                          const itemStream = item.streamUrl || `${apiBase}/api/downloader/stream?url=${encodeURIComponent(item.url || '')}&type=${item.type || 'video'}&format=${item.format || 'mp4'}&title=${encodeURIComponent(item.filename || 'media')}`;
+                          triggerFileDownload(item.id, item.filename, itemStream);
+                        }}
                         className="btn-pixel btn-pixel-surface px-3 py-1 font-pixel text-[8px] text-arcade-emerald hover:border-arcade-emerald"
                       >
                         GET FILE
@@ -1157,7 +1181,7 @@ export default function UniversalDownloader() {
                     )}
                     {item?.id && (
                       <a
-                        href={item.streamUrl || `${apiBase}/api/downloader/stream/${item.id}`}
+                        href={item.streamUrl || `${apiBase}/api/downloader/stream?url=${encodeURIComponent(item.url || '')}&type=${item.type || 'video'}&format=${item.format || 'mp4'}&title=${encodeURIComponent(item.filename || 'media')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn-pixel btn-pixel-surface px-2.5 py-1 font-pixel text-[8px] text-arcade-cyan hover:border-arcade-cyan"

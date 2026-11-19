@@ -342,11 +342,22 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
 });
 
 async function handleServerStream(req, res) {
-  const jobId = req.params?.jobId || '';
-  let targetUrl = req.query?.url || '';
-  let targetType = req.query?.type || 'video';
-  let targetFormat = req.query?.format || 'mp4';
-  let cleanName = req.query?.title || 'downloaded_media';
+  let parsedUrl = null;
+  try {
+    parsedUrl = new URL(req.url, 'http://localhost');
+  } catch (e) {}
+
+  let jobId = req.params?.jobId || '';
+  if (!jobId && req.url) {
+    const pathMatch = req.url.match(/\/stream\/([^?#]+)/);
+    if (pathMatch) jobId = decodeURIComponent(pathMatch[1]);
+  }
+
+  let targetUrl = req.query?.url || req.body?.url || parsedUrl?.searchParams?.get('url') || '';
+  let targetType = req.query?.type || req.body?.type || parsedUrl?.searchParams?.get('type') || 'video';
+  let targetFormat = req.query?.format || req.body?.format || parsedUrl?.searchParams?.get('format') || 'mp4';
+  let cleanName = req.query?.title || req.body?.title || parsedUrl?.searchParams?.get('title') || 'downloaded_media';
+  const token = req.query?.token || req.body?.token || parsedUrl?.searchParams?.get('token') || '';
 
   const job = downloadJobs.get(jobId);
   let filePath = job?.filePath;
@@ -368,27 +379,27 @@ async function handleServerStream(req, res) {
     return res.download(path.resolve(filePath), finalClean);
   }
 
-  // 2. Decode from self-contained jobId token if not on disk
-  if (jobId.startsWith('job_token_')) {
+  // 2. Decode from self-contained token if not on disk
+  if (!targetUrl && (token || jobId.startsWith('job_token_') || jobId.startsWith('token_'))) {
+    const rawToken = token || jobId.replace(/^job_token_/, '').replace(/^token_/, '');
     try {
-      const raw = jobId.replace('job_token_', '');
-      const decoded = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
-      targetUrl = decoded.u || targetUrl;
-      targetType = decoded.t || targetType;
-      targetFormat = decoded.f || targetFormat;
-      cleanName = decoded.n || cleanName;
+      const decoded = JSON.parse(Buffer.from(rawToken, 'base64url').toString('utf8'));
+      if (decoded.u) targetUrl = decoded.u;
+      if (decoded.t) targetType = decoded.t;
+      if (decoded.f) targetFormat = decoded.f;
+      if (decoded.n) cleanName = decoded.n;
     } catch (e) { }
   }
 
-  // 3. Fallback query parameters or decoded token query
-  if (!targetUrl && req.query?.token) {
-    try {
-      const decoded = JSON.parse(Buffer.from(req.query.token, 'base64url').toString('utf8'));
-      targetUrl = decoded.u;
-      targetType = decoded.t || targetType;
-      targetFormat = decoded.f || targetFormat;
-      cleanName = decoded.n || cleanName;
-    } catch (e) { }
+  // 3. Fallback history check if jobId was a completed history item
+  if (!targetUrl && jobId) {
+    const hist = downloadHistory.find(h => h.id === jobId);
+    if (hist && hist.url) {
+      targetUrl = hist.url;
+      targetType = hist.type || targetType;
+      targetFormat = hist.format || targetFormat;
+      cleanName = hist.filename || cleanName;
+    }
   }
 
   if (targetUrl) {

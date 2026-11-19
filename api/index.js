@@ -388,7 +388,8 @@ app.post('/api/downloader/download', (req, res) => {
     filename: tokenPayload.n,
     isCloud: true,
     isWebMode: true,
-    streamUrl: `/api/downloader/stream?token=${token}`,
+    token,
+    streamUrl: `/api/downloader/stream/${jobId}?token=${token}&url=${encodeURIComponent(cleanUrl)}&type=${type}&format=${tokenPayload.f}&title=${encodeURIComponent(cleanTitle)}`,
     completedAt: new Date().toISOString()
   };
 
@@ -427,42 +428,56 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
 
 // Stateless media streaming handler (works across all Vercel serverless lambdas)
 async function handleStatelessStream(req, res) {
-  const jobId = req.params?.jobId || '';
-  let targetUrl = req.query?.url || '';
-  let targetType = req.query?.type || 'video';
-  let targetFormat = req.query?.format || 'mp4';
-  let cleanName = req.query?.title || 'downloaded_media';
+  // Parse raw URL query string directly in case Express req.query was lost during Vercel rewrites
+  let parsedUrl = null;
+  try {
+    parsedUrl = new URL(req.url, 'http://localhost');
+  } catch (e) {}
+
+  let jobId = req.params?.jobId || '';
+  if (!jobId && req.url) {
+    const pathMatch = req.url.match(/\/stream\/([^?#]+)/);
+    if (pathMatch) jobId = decodeURIComponent(pathMatch[1]);
+  }
+
+  let targetUrl = req.query?.url || req.body?.url || parsedUrl?.searchParams?.get('url') || '';
+  let targetType = req.query?.type || req.body?.type || parsedUrl?.searchParams?.get('type') || 'video';
+  let targetFormat = req.query?.format || req.body?.format || parsedUrl?.searchParams?.get('format') || (targetType === 'audio' ? 'mp3' : 'mp4');
+  let cleanName = req.query?.title || req.body?.title || parsedUrl?.searchParams?.get('title') || 'downloaded_media';
+  const token = req.query?.token || req.body?.token || parsedUrl?.searchParams?.get('token') || '';
 
   // 1. Check in-memory first if same instance
-  const job = cloudDownloadJobs.get(jobId);
-  if (job) {
-    targetUrl = job.url || targetUrl;
-    targetType = job.type || targetType;
-    targetFormat = job.format || targetFormat;
-    cleanName = job.filename || cleanName;
+  if (jobId) {
+    const job = cloudDownloadJobs.get(jobId);
+    if (job) {
+      targetUrl = job.url || targetUrl;
+      targetType = job.type || targetType;
+      targetFormat = job.format || targetFormat;
+      cleanName = job.filename || cleanName;
+    }
   }
 
-  // 2. Decode from self-contained jobId token if not in memory
-  if ((!targetUrl || !job) && jobId.startsWith('job_token_')) {
+  // 2. Decode from self-contained token (from query, body, or jobId)
+  if (!targetUrl && (token || jobId.startsWith('job_token_') || jobId.startsWith('token_'))) {
+    const rawToken = token || jobId.replace(/^job_token_/, '').replace(/^token_/, '');
     try {
-      const raw = jobId.replace('job_token_', '');
-      const decoded = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
-      targetUrl = decoded.u || targetUrl;
-      targetType = decoded.t || targetType;
-      targetFormat = decoded.f || targetFormat;
-      cleanName = decoded.n || cleanName;
+      const decoded = JSON.parse(Buffer.from(rawToken, 'base64url').toString('utf8'));
+      if (decoded.u) targetUrl = decoded.u;
+      if (decoded.t) targetType = decoded.t;
+      if (decoded.f) targetFormat = decoded.f;
+      if (decoded.n) cleanName = decoded.n;
     } catch (e) {}
   }
 
-  // 3. Fallback query parameters or decoded token query
-  if (!targetUrl && req.query?.token) {
-    try {
-      const decoded = JSON.parse(Buffer.from(req.query.token, 'base64url').toString('utf8'));
-      targetUrl = decoded.u;
-      targetType = decoded.t || targetType;
-      targetFormat = decoded.f || targetFormat;
-      cleanName = decoded.n || cleanName;
-    } catch (e) {}
+  // 3. Check history lookup if jobId was a past download
+  if (!targetUrl && jobId) {
+    const hist = cloudDownloadHistory.find(h => h.id === jobId);
+    if (hist && hist.url) {
+      targetUrl = hist.url;
+      targetType = hist.type || targetType;
+      targetFormat = hist.format || targetFormat;
+      cleanName = hist.filename || cleanName;
+    }
   }
 
   if (!targetUrl) {
