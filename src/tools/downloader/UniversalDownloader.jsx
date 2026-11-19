@@ -205,6 +205,7 @@ export default function UniversalDownloader() {
           type: targetType,
           quality: targetQuality,
           format: targetFormat,
+          title: cleanTitle,
           customArgs,
           startTime,
           endTime,
@@ -217,6 +218,30 @@ export default function UniversalDownloader() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start download');
 
+      // If serverless cloud instant stream
+      if (data.status === 'completed' || data.isCloud) {
+        const completedJob = {
+          id: data.jobId,
+          status: 'completed',
+          progress: 100,
+          speed: 'Direct Cloud Stream',
+          eta: '00:00',
+          filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`,
+          streamUrl: data.streamUrl || `/api/downloader/stream/${data.jobId}`
+        };
+        setCurrentJob(completedJob);
+        saveToLocalHistory({
+          id: completedJob.id,
+          filename: completedJob.filename,
+          type: targetType,
+          format: targetFormat,
+          completedAt: new Date().toISOString()
+        });
+        playSuccess();
+        triggerFileDownload(data.jobId, completedJob.filename, completedJob.streamUrl);
+        return;
+      }
+
       // Local background worker running
       setCurrentJob({
         id: data.jobId,
@@ -224,7 +249,8 @@ export default function UniversalDownloader() {
         progress: 0,
         speed: 'Connecting...',
         eta: '--:--',
-        filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`
+        filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`,
+        streamUrl: data.streamUrl || `/api/downloader/stream/${data.jobId}`
       });
 
       // Poll progress safely
@@ -235,16 +261,17 @@ export default function UniversalDownloader() {
     }
   };
 
-  const triggerFileDownload = async (jobId, targetFilename) => {
-    if (!jobId) return;
+  const triggerFileDownload = async (jobId, targetFilename, explicitStreamUrl = null) => {
+    if (!jobId && !explicitStreamUrl) return;
     setDownloadingFile(true);
     playClick();
 
     const cleanFilename = (targetFilename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
+    const streamEndpoint = explicitStreamUrl || `/api/downloader/stream/${jobId}`;
 
     try {
       // 1. Fetch blob with direct browser progress
-      const streamRes = await fetch(`/api/downloader/stream/${jobId}`);
+      const streamRes = await fetch(streamEndpoint);
       if (!streamRes.ok) throw new Error(`Stream HTTP ${streamRes.status}`);
 
       const blob = await streamRes.blob();
@@ -259,13 +286,13 @@ export default function UniversalDownloader() {
         window.URL.revokeObjectURL(blobUrl);
         link.remove();
         setDownloadingFile(false);
-      }, 2000);
+      }, 2500);
       playSuccess();
     } catch (err) {
       console.warn('Direct blob save fallback to direct navigation:', err);
       setDownloadingFile(false);
       // 2. Direct browser navigation fallback
-      window.location.href = `/api/downloader/stream/${jobId}`;
+      window.location.href = streamEndpoint;
     }
   };
 
@@ -292,7 +319,7 @@ export default function UniversalDownloader() {
             playSuccess();
             fetchHistory();
             // Automatically trigger native file save
-            triggerFileDownload(job.id, job.filename);
+            triggerFileDownload(job.id, job.filename, job.streamUrl);
           } else if (job.status === 'failed') {
             clearInterval(interval);
             setError(job.error || 'Download process encountered an error');
@@ -828,7 +855,7 @@ export default function UniversalDownloader() {
                     {currentJob.id && (
                       <button
                         type="button"
-                        onClick={() => triggerFileDownload(currentJob.id, currentJob.filename)}
+                        onClick={() => triggerFileDownload(currentJob.id, currentJob.filename, currentJob.streamUrl)}
                         disabled={downloadingFile}
                         className="btn-pixel btn-pixel-emerald px-5 py-2.5 font-pixel text-[10px] flex items-center gap-2 shadow-lg"
                       >
@@ -839,7 +866,7 @@ export default function UniversalDownloader() {
 
                     {currentJob.id && (
                       <a
-                        href={`/api/downloader/stream/${currentJob.id}`}
+                        href={currentJob.streamUrl || `/api/downloader/stream/${currentJob.id}`}
                         download={(currentJob?.filename || 'download').replace(new RegExp(`^${currentJob?.id}_`), '')}
                         className="btn-pixel btn-pixel-cyan px-3 py-2 font-pixel text-[9px] flex items-center gap-1.5"
                       >
@@ -998,7 +1025,7 @@ export default function UniversalDownloader() {
                   {item?.id && (
                     <button
                       type="button"
-                      onClick={() => triggerFileDownload(item.id, item.filename)}
+                      onClick={() => triggerFileDownload(item.id, item.filename, item.streamUrl)}
                       className="btn-pixel btn-pixel-surface px-3 py-1 font-pixel text-[8px] text-arcade-emerald hover:border-arcade-emerald shrink-0"
                     >
                       GET FILE

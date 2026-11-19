@@ -3,6 +3,7 @@ import cors from 'cors';
 import dns from 'dns/promises';
 import vm from 'vm';
 import crypto from 'crypto';
+import { Readable } from 'stream';
 import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
@@ -343,16 +344,25 @@ app.post('/api/downloader/inspect', async (req, res) => {
 });
 
 app.post('/api/downloader/download', (req, res) => {
-  const { url, type = 'video', format = 'mp4' } = req.body;
+  const { url, type = 'video', format = 'mp4', title = '' } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
-  const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const cleanUrl = url.trim();
   const isDirect = /\.(mp4|webm|mp3|m4a|wav|flac|ogg)($|\?)/i.test(cleanUrl);
 
-  const cleanTitle = cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')
+  const cleanTitle = (title || (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')
     ? 'YouTube_Media'
-    : cleanUrl.split('/').pop().split('?')[0] || 'OmniDeck_Download';
+    : cleanUrl.split('/').pop().split('?')[0] || 'OmniDeck_Download')).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 50);
+
+  // Encode request details directly into stateless token so it survives across serverless instances
+  const tokenPayload = {
+    u: cleanUrl,
+    t: type,
+    f: format || (type === 'audio' ? 'mp3' : 'mp4'),
+    n: `${cleanTitle}.${format || (type === 'audio' ? 'mp3' : 'mp4')}`
+  };
+  const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
+  const jobId = `job_token_${token}`;
 
   const job = {
     id: jobId,
@@ -360,13 +370,13 @@ app.post('/api/downloader/download', (req, res) => {
     type,
     format,
     progress: 100,
-    speed: 'Instant Stream',
+    speed: 'Instant Cloud Stream',
     eta: '00:00',
     status: 'completed',
-    filename: `${cleanTitle}.${format || 'mp4'}`,
+    filename: tokenPayload.n,
     isCloud: true,
     isWebMode: true,
-    streamUrl: isDirect ? cleanUrl : null,
+    streamUrl: `/api/downloader/stream?token=${token}`,
     completedAt: new Date().toISOString()
   };
 
@@ -403,55 +413,104 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
   res.json(job);
 });
 
-app.get('/api/downloader/stream/:jobId', async (req, res) => {
-  const jobId = req.params.jobId;
-  const job = cloudDownloadJobs.get(jobId);
-  const cleanName = (job?.filename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
+// Stateless media streaming handler (works across all Vercel serverless lambdas)
+async function handleStatelessStream(req, res) {
+  const jobId = req.params?.jobId || '';
+  let targetUrl = req.query?.url || '';
+  let targetType = req.query?.type || 'video';
+  let targetFormat = req.query?.format || 'mp4';
+  let cleanName = req.query?.title || 'downloaded_media';
 
-  if (!job) {
-    return res.status(404).send('Download job not found or expired.');
+  // 1. Check in-memory first if same instance
+  const job = cloudDownloadJobs.get(jobId);
+  if (job) {
+    targetUrl = job.url || targetUrl;
+    targetType = job.type || targetType;
+    targetFormat = job.format || targetFormat;
+    cleanName = job.filename || cleanName;
   }
 
-  // 1. Direct stream URL
-  if (job.streamUrl) {
+  // 2. Decode from self-contained jobId token if not in memory
+  if ((!targetUrl || !job) && jobId.startsWith('job_token_')) {
     try {
-      const mediaRes = await fetch(job.streamUrl);
-      if (mediaRes.ok) {
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName)}"`);
+      const raw = jobId.replace('job_token_', '');
+      const decoded = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+      targetUrl = decoded.u || targetUrl;
+      targetType = decoded.t || targetType;
+      targetFormat = decoded.f || targetFormat;
+      cleanName = decoded.n || cleanName;
+    } catch (e) {}
+  }
+
+  // 3. Fallback query parameters or decoded token query
+  if (!targetUrl && req.query?.token) {
+    try {
+      const decoded = JSON.parse(Buffer.from(req.query.token, 'base64url').toString('utf8'));
+      targetUrl = decoded.u;
+      targetType = decoded.t || targetType;
+      targetFormat = decoded.f || targetFormat;
+      cleanName = decoded.n || cleanName;
+    } catch (e) {}
+  }
+
+  if (!targetUrl) {
+    return res.status(404).send('Download job or URL not specified.');
+  }
+
+  // Ensure cleanName has proper extension
+  const ext = targetType === 'audio' ? (targetFormat === 'mp3' ? 'mp3' : 'm4a') : (targetFormat || 'mp4');
+  if (!cleanName.endsWith(`.${ext}`)) {
+    cleanName = cleanName.replace(/\.[^.]+$/, '') + `.${ext}`;
+  }
+
+  // Stream direct media file URL
+  const isDirect = /\.(mp4|webm|mp3|m4a|wav|flac|ogg)($|\?)/i.test(targetUrl);
+  if (isDirect) {
+    try {
+      const mediaRes = await fetch(targetUrl);
+      if (mediaRes.ok && mediaRes.body) {
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
         res.setHeader('Content-Type', mediaRes.headers.get('content-type') || 'application/octet-stream');
-        const buffer = await mediaRes.arrayBuffer();
-        return res.send(Buffer.from(buffer));
+        return Readable.fromWeb(mediaRes.body).pipe(res);
       }
     } catch (e) {}
-    return res.redirect(job.streamUrl);
+    return res.redirect(targetUrl);
   }
 
-  // 2. Resolve YouTube stream via Ytdl
-  if (job.url && (job.url.includes('youtube.com') || job.url.includes('youtu.be'))) {
+  // Stream YouTube media URL via ytdl
+  if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
     try {
-      const info = await ytdl.getInfo(job.url);
-      let targetFormat = null;
-      if (job.type === 'audio') {
+      const info = await ytdl.getInfo(targetUrl);
+      let targetStreamFormat = null;
+      if (targetType === 'audio') {
         const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
-        targetFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+        targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
       } else {
-        const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
-        targetFormat = videoFormats[0];
+        const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
+        if (muxed.length > 0) {
+          targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
+        } else {
+          const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
+          targetStreamFormat = videoFormats[0];
+        }
       }
 
-      if (targetFormat && targetFormat.url) {
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName)}"`);
-        res.setHeader('Content-Type', targetFormat.mimeType || 'application/octet-stream');
+      if (targetStreamFormat && targetStreamFormat.url) {
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
+        res.setHeader('Content-Type', targetStreamFormat.mimeType || (targetType === 'audio' ? 'audio/mpeg' : 'video/mp4'));
+        if (targetStreamFormat.contentLength) {
+          res.setHeader('Content-Length', targetStreamFormat.contentLength);
+        }
 
         try {
-          const mediaRes = await fetch(targetFormat.url);
-          if (mediaRes.ok) {
-            const buffer = await mediaRes.arrayBuffer();
-            return res.send(Buffer.from(buffer));
+          const fetchRes = await fetch(targetStreamFormat.url);
+          if (fetchRes.ok && fetchRes.body) {
+            return Readable.fromWeb(fetchRes.body).pipe(res);
           }
         } catch (fetchErr) {}
 
-        return res.redirect(targetFormat.url);
+        // Fallback direct URL redirect
+        return res.redirect(targetStreamFormat.url);
       }
     } catch (err) {
       return res.status(500).send('Stream resolution failed: ' + err.message);
@@ -459,7 +518,10 @@ app.get('/api/downloader/stream/:jobId', async (req, res) => {
   }
 
   res.status(404).send('No downloadable stream available.');
-});
+}
+
+app.get('/api/downloader/stream/:jobId', handleStatelessStream);
+app.get('/api/downloader/stream', handleStatelessStream);
 
 app.get('/api/downloader/history', (req, res) => {
   res.json(cloudDownloadHistory);

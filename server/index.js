@@ -14,8 +14,11 @@ import multer from 'multer';
 import archiver from 'archiver';
 import vm from 'vm';
 import crypto from 'crypto';
+import { Readable } from 'stream';
+import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
+const ytdl = new Ytdl();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -325,12 +328,18 @@ app.get('/api/downloader/progress/:jobId', (req, res) => {
   res.json(job);
 });
 
-app.get('/api/downloader/stream/:jobId', (req, res) => {
-  const jobId = req.params.jobId;
+async function handleServerStream(req, res) {
+  const jobId = req.params?.jobId || '';
+  let targetUrl = req.query?.url || '';
+  let targetType = req.query?.type || 'video';
+  let targetFormat = req.query?.format || 'mp4';
+  let cleanName = req.query?.title || 'downloaded_media';
+
   const job = downloadJobs.get(jobId);
   let filePath = job?.filePath;
   let filename = job?.filename;
 
+  // 1. Check local file on disk
   if (!filePath || !fs.existsSync(filePath)) {
     try {
       const found = fs.readdirSync(downloadsDir).find(f => f.startsWith(jobId));
@@ -341,13 +350,74 @@ app.get('/api/downloader/stream/:jobId', (req, res) => {
     } catch (e) {}
   }
 
-  if (!filePath || !fs.existsSync(filePath)) {
-    return res.status(404).send('File not found or still processing.');
+  if (filePath && fs.existsSync(filePath)) {
+    const finalClean = filename ? filename.replace(new RegExp(`^${jobId}_`), '') : path.basename(filePath);
+    return res.download(path.resolve(filePath), finalClean);
   }
 
-  const cleanName = filename ? filename.replace(new RegExp(`^${jobId}_`), '') : path.basename(filePath);
-  res.download(path.resolve(filePath), cleanName);
-});
+  // 2. Decode from self-contained jobId token if not on disk
+  if (jobId.startsWith('job_token_')) {
+    try {
+      const raw = jobId.replace('job_token_', '');
+      const decoded = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+      targetUrl = decoded.u || targetUrl;
+      targetType = decoded.t || targetType;
+      targetFormat = decoded.f || targetFormat;
+      cleanName = decoded.n || cleanName;
+    } catch (e) {}
+  }
+
+  // 3. Fallback query parameters or decoded token query
+  if (!targetUrl && req.query?.token) {
+    try {
+      const decoded = JSON.parse(Buffer.from(req.query.token, 'base64url').toString('utf8'));
+      targetUrl = decoded.u;
+      targetType = decoded.t || targetType;
+      targetFormat = decoded.f || targetFormat;
+      cleanName = decoded.n || cleanName;
+    } catch (e) {}
+  }
+
+  if (targetUrl) {
+    // Stream YouTube media URL via ytdl
+    if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
+      try {
+        const info = await ytdl.getInfo(targetUrl);
+        let targetStreamFormat = null;
+        if (targetType === 'audio') {
+          const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
+          targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+        } else {
+          const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
+          if (muxed.length > 0) {
+            targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
+          } else {
+            const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
+            targetStreamFormat = videoFormats[0];
+          }
+        }
+
+        if (targetStreamFormat && targetStreamFormat.url) {
+          const ext = targetType === 'audio' ? (targetFormat === 'mp3' ? 'mp3' : 'm4a') : (targetFormat || 'mp4');
+          if (!cleanName.endsWith(`.${ext}`)) {
+            cleanName = cleanName.replace(/\.[^.]+$/, '') + `.${ext}`;
+          }
+          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
+          res.setHeader('Content-Type', targetStreamFormat.mimeType || (targetType === 'audio' ? 'audio/mpeg' : 'video/mp4'));
+          const fetchRes = await fetch(targetStreamFormat.url);
+          if (fetchRes.ok && fetchRes.body) {
+            return Readable.fromWeb(fetchRes.body).pipe(res);
+          }
+        }
+      } catch (err) {}
+    }
+  }
+
+  return res.status(404).send('File not found or still processing.');
+}
+
+app.get('/api/downloader/stream/:jobId', handleServerStream);
+app.get('/api/downloader/stream', handleServerStream);
 
 app.get('/api/downloader/history', (req, res) => {
   res.json(downloadHistory);
