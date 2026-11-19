@@ -217,7 +217,7 @@ export default function ShttpsHost() {
               className="btn-pixel btn-pixel-amber w-full py-3 font-pixel text-[10px] flex items-center justify-center gap-2 mt-4"
             >
               <Play className="w-3.5 h-3.5 fill-black" />
-              SPAWN {protocol.toUpperCase()} SERVER
+              SPAWN {String(protocol || 'http').toUpperCase()} SERVER
             </button>
           </form>
         </div>
@@ -260,7 +260,7 @@ export default function ShttpsHost() {
                       <div className="w-3 h-3 bg-arcade-emerald rounded-none animate-pulse"></div>
                       <div>
                         <div className="font-pixel text-xs text-white">
-                          PORT :{srv.port} // {srv.protocol.toUpperCase()}
+                          PORT :{srv.port} // {String(srv?.protocol || 'http').toUpperCase()}
                         </div>
                         <div className="text-[10px] text-arcade-muted font-mono mt-0.5">
                           Serving: <span className="text-arcade-paper">{srv.rootDir}</span>

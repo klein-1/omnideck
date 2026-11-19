@@ -33,6 +33,7 @@ export default function UniversalDownloader() {
   const [history, setHistory] = useState([]);
   const [copiedLink, setCopiedLink] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState(false);
+  const [apiBase, setApiBase] = useState('');
 
   // Spotify Search state
   const [spotifyQuery, setSpotifyQuery] = useState('');
@@ -46,22 +47,40 @@ export default function UniversalDownloader() {
   }, []);
 
   const checkEngineStatus = async () => {
+    // 1. First probe local desktop companion (running on port 3001)
+    try {
+      const localRes = await fetch('http://127.0.0.1:3001/api/downloader/status', {
+        signal: AbortSignal.timeout(1800)
+      });
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        setEngineStatus({ ...localData, isDesktopLocal: true });
+        setApiBase('http://127.0.0.1:3001');
+        return;
+      }
+    } catch (e) {}
+
+    // 2. Fall back to current host API (e.g. Vercel serverless /api)
     try {
       const res = await fetch('/api/downloader/status');
       if (res.ok) {
         const data = await res.json();
         setEngineStatus(data);
+        setApiBase('');
       } else {
         setEngineStatus({ online: true, isCloud: true, hasYtDlp: false });
+        setApiBase('');
       }
     } catch {
       setEngineStatus({ online: true, isCloud: true, hasYtDlp: false });
+      setApiBase('');
     }
   };
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/downloader/history');
+      const base = apiBase || '';
+      const res = await fetch(`${base}/api/downloader/history`);
       if (res.ok) {
         const data = await res.json();
         const serverHist = Array.isArray(data) ? data : [];
@@ -100,8 +119,9 @@ export default function UniversalDownloader() {
     const cleanUrl = url.trim();
 
     try {
-      // 1. Try server endpoint
-      const res = await fetch('/api/downloader/inspect', {
+      // 1. Try server endpoint (local desktop companion or cloud)
+      const base = apiBase || '';
+      const res = await fetch(`${base}/api/downloader/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: cleanUrl })
@@ -180,24 +200,27 @@ export default function UniversalDownloader() {
 
   // Start Download directly via backend engine
   const handleStartDownload = async (overrideUrl = null, overrideType = null, overrideFormat = null, overrideQuality = null) => {
-    const targetUrl = (overrideUrl || url || '').trim();
+    // Avoid React event objects being interpreted as string URLs
+    const cleanOverrideUrl = (typeof overrideUrl === 'string' && overrideUrl.trim()) ? overrideUrl.trim() : null;
+    const targetUrl = (cleanOverrideUrl || url || '').trim();
     if (!targetUrl) return;
     setError(null);
     playClick();
 
-    const targetType = overrideType || type;
-    const targetFormat = overrideFormat || format;
-    const targetQuality = overrideQuality || quality;
+    const targetType = (typeof overrideType === 'string' && overrideType) ? overrideType : type;
+    const targetFormat = (typeof overrideFormat === 'string' && overrideFormat) ? overrideFormat : format;
+    const targetQuality = (typeof overrideQuality === 'string' && overrideQuality) ? overrideQuality : quality;
 
-    if (overrideUrl) setUrl(targetUrl);
-    if (overrideType) setType(targetType);
-    if (overrideFormat) setFormat(targetFormat);
-    if (overrideQuality) setQuality(targetQuality);
+    if (cleanOverrideUrl) setUrl(targetUrl);
+    if (typeof overrideType === 'string') setType(targetType);
+    if (typeof overrideFormat === 'string') setFormat(targetFormat);
+    if (typeof overrideQuality === 'string') setQuality(targetQuality);
 
     const cleanTitle = (mediaInfo?.title || 'download').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 50);
 
     try {
-      const res = await fetch('/api/downloader/download', {
+      const base = apiBase || '';
+      const res = await fetch(`${base}/api/downloader/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,14 +243,15 @@ export default function UniversalDownloader() {
 
       // If serverless cloud instant stream
       if (data.status === 'completed' || data.isCloud) {
+        const streamEndpoint = data.streamUrl ? `${base}${data.streamUrl}` : `${base}/api/downloader/stream/${data.jobId}`;
         const completedJob = {
           id: data.jobId,
           status: 'completed',
           progress: 100,
-          speed: 'Direct Cloud Stream',
+          speed: data.speed || 'Direct Cloud Stream',
           eta: '00:00',
           filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`,
-          streamUrl: data.streamUrl || `/api/downloader/stream/${data.jobId}`
+          streamUrl: streamEndpoint
         };
         setCurrentJob(completedJob);
         saveToLocalHistory({
@@ -243,6 +267,7 @@ export default function UniversalDownloader() {
       }
 
       // Local background worker running
+      const streamEndpoint = data.streamUrl ? `${base}${data.streamUrl}` : `${base}/api/downloader/stream/${data.jobId}`;
       setCurrentJob({
         id: data.jobId,
         status: data.status || 'starting',
@@ -250,13 +275,13 @@ export default function UniversalDownloader() {
         speed: 'Connecting...',
         eta: '--:--',
         filename: data.filename || `${cleanTitle}.${targetFormat || 'mp4'}`,
-        streamUrl: data.streamUrl || `/api/downloader/stream/${data.jobId}`
+        streamUrl: streamEndpoint
       });
 
       // Poll progress safely
       pollJobProgress(data.jobId);
     } catch (err) {
-      setError(err.message || 'Download process encountered an error. Ensure local server is online.');
+      setError(err.message || 'Download process encountered an error. Ensure backend engine is online.');
       playError();
     }
   };
@@ -266,13 +291,28 @@ export default function UniversalDownloader() {
     setDownloadingFile(true);
     playClick();
 
-    const cleanFilename = (targetFilename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
-    const streamEndpoint = explicitStreamUrl || `/api/downloader/stream/${jobId}`;
+    const cleanFilename = String(targetFilename || 'downloaded_media').replace(new RegExp(`^${jobId}_`), '');
+    const base = apiBase || '';
+    const streamEndpoint = explicitStreamUrl || `${base}/api/downloader/stream/${jobId}`;
 
     try {
       // 1. Fetch blob with direct browser progress
       const streamRes = await fetch(streamEndpoint);
-      if (!streamRes.ok) throw new Error(`Stream HTTP ${streamRes.status}`);
+      if (!streamRes.ok) {
+        let errMessage = `HTTP ${streamRes.status}`;
+        try {
+          const text = await streamRes.text();
+          if (text) {
+            try {
+              const j = JSON.parse(text);
+              errMessage = j.message || j.error || text;
+            } catch {
+              errMessage = text.slice(0, 300);
+            }
+          }
+        } catch {}
+        throw new Error(errMessage);
+      }
 
       const blob = await streamRes.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -289,18 +329,25 @@ export default function UniversalDownloader() {
       }, 2500);
       playSuccess();
     } catch (err) {
-      console.warn('Direct blob save fallback to direct navigation:', err);
+      console.warn('Direct stream fetch failed:', err);
       setDownloadingFile(false);
-      // 2. Direct browser navigation fallback
-      window.location.href = streamEndpoint;
+      // DO NOT navigate the window away with window.location.href!
+      const isBot = err.message?.includes('not a bot') || err.message?.includes('BOT_CHECK');
+      setError(
+        isBot
+          ? 'YOUTUBE BOT-GUARD DETECTED: YouTube restricted cloud datacenter IP requests. Start the local Desktop Companion (node server/index.js) with yt-dlp to download directly from your residential IP, or try an alternative quality.'
+          : `STREAM DOWNLOAD ENCOUNTERED ISSUE: ${err.message || 'Connection interrupted'}`
+      );
+      playError();
     }
   };
 
   const pollJobProgress = (jobId) => {
     if (!jobId) return;
+    const base = apiBase || '';
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/downloader/progress/${jobId}`);
+        const res = await fetch(`${base}/api/downloader/progress/${jobId}`);
         if (!res.ok) {
           clearInterval(interval);
           return;
@@ -329,7 +376,7 @@ export default function UniversalDownloader() {
       } catch {
         clearInterval(interval);
       }
-    }, 800);
+    }, 1000);
   };
 
   // Spotify Search
@@ -342,7 +389,8 @@ export default function UniversalDownloader() {
     playClick();
 
     try {
-      const res = await fetch('/api/downloader/spotify-search', {
+      const base = apiBase || '';
+      const res = await fetch(`${base}/api/downloader/spotify-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: spotifyQuery.trim() })
@@ -437,17 +485,25 @@ export default function UniversalDownloader() {
 
         {/* Engine Status Badge */}
         <div className="flex items-center gap-2 text-[10px] font-mono">
-          {engineStatus.hasYtDlp ? (
+          {engineStatus.isDesktopLocal || engineStatus.hasYtDlp ? (
             <span className="flex items-center gap-1.5 text-arcade-emerald border border-arcade-emerald/40 px-2 py-0.5 bg-emerald-950/20">
               <span className="w-2 h-2 rounded-full bg-arcade-emerald animate-pulse"></span>
-              DESKTOP 4K ENGINE: YT-DLP ONLINE
+              DESKTOP COMPANION (YT-DLP 4K ONLINE)
             </span>
           ) : (
             <span className="flex items-center gap-1.5 text-arcade-cyan border border-arcade-cyan/40 px-2 py-0.5 bg-cyan-950/20">
               <Cloud className="w-3 h-3 text-arcade-cyan" />
-              DIRECT WEB STREAM RESOLVER
+              CLOUD RESOLVER (VERCEL ENGINE)
             </span>
           )}
+          <button
+            type="button"
+            onClick={checkEngineStatus}
+            title="Probe local desktop engine (port 3001)"
+            className="text-[9px] text-arcade-muted hover:text-white px-1.5 py-0.5 border border-deck-border flex items-center gap-1"
+          >
+            <RefreshCw className="w-2.5 h-2.5" /> RECHECK
+          </button>
         </div>
       </div>
 
@@ -825,7 +881,7 @@ export default function UniversalDownloader() {
               <div className="flex items-center justify-between text-xs font-pixel">
                 <span className="text-arcade-cyan flex items-center gap-2">
                   <span className="w-2 h-2 bg-arcade-cyan animate-ping inline-block"></span>
-                  DOWNLOAD STATUS: {(currentJob?.status || 'STARTING').toUpperCase()}
+                  DOWNLOAD STATUS: {String(currentJob?.status || 'STARTING').toUpperCase()}
                 </span>
                 <span className="text-white">{currentJob?.progress ?? 100}%</span>
               </div>
@@ -866,11 +922,13 @@ export default function UniversalDownloader() {
 
                     {currentJob.id && (
                       <a
-                        href={currentJob.streamUrl || `/api/downloader/stream/${currentJob.id}`}
-                        download={(currentJob?.filename || 'download').replace(new RegExp(`^${currentJob?.id}_`), '')}
+                        href={currentJob.streamUrl || `${apiBase}/api/downloader/stream/${currentJob.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="btn-pixel btn-pixel-cyan px-3 py-2 font-pixel text-[9px] flex items-center gap-1.5"
                       >
-                        DIRECT LINK
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        DIRECT STREAM LINK
                       </a>
                     )}
 
@@ -1018,19 +1076,31 @@ export default function UniversalDownloader() {
                   <div className="min-w-0">
                     <div className="text-white font-bold truncate">{item?.filename || 'Untitled Media'}</div>
                     <div className="text-[10px] text-arcade-muted">
-                      {item?.completedAt ? new Date(item.completedAt).toLocaleString() : 'Recent'} • {(item?.type || 'media').toUpperCase()} ({item?.format || 'mp4'})
+                      {item?.completedAt ? new Date(item.completedAt).toLocaleString() : 'Recent'} • {String(item?.type || 'media').toUpperCase()} ({String(item?.format || 'mp4')})
                     </div>
                   </div>
 
-                  {item?.id && (
-                    <button
-                      type="button"
-                      onClick={() => triggerFileDownload(item.id, item.filename, item.streamUrl)}
-                      className="btn-pixel btn-pixel-surface px-3 py-1 font-pixel text-[8px] text-arcade-emerald hover:border-arcade-emerald shrink-0"
-                    >
-                      GET FILE
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item?.id && (
+                      <button
+                        type="button"
+                        onClick={() => triggerFileDownload(item.id, item.filename, item.streamUrl)}
+                        className="btn-pixel btn-pixel-surface px-3 py-1 font-pixel text-[8px] text-arcade-emerald hover:border-arcade-emerald"
+                      >
+                        GET FILE
+                      </button>
+                    )}
+                    {item?.id && (
+                      <a
+                        href={item.streamUrl || `${apiBase}/api/downloader/stream/${item.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-pixel btn-pixel-surface px-2.5 py-1 font-pixel text-[8px] text-arcade-cyan hover:border-arcade-cyan"
+                      >
+                        STREAM
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

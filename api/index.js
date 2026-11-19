@@ -7,7 +7,18 @@ import { Readable } from 'stream';
 import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
-const ytdl = new Ytdl();
+
+// Factory to create unpoisoned Ytdl instances across serverless executions
+function getFreshYtdl(clients = ['tv', 'web_embedded', 'visionos', 'mweb']) {
+  const opts = {
+    clients,
+    timeoutMs: 25000,
+  };
+  if (process.env.YOUTUBE_COOKIE) {
+    opts.cookie = process.env.YOUTUBE_COOKIE;
+  }
+  return new Ytdl(opts);
+}
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -479,41 +490,82 @@ async function handleStatelessStream(req, res) {
 
   // Stream YouTube media URL via ytdl
   if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
-    try {
-      const info = await ytdl.getInfo(targetUrl);
-      let targetStreamFormat = null;
-      if (targetType === 'audio') {
-        const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
+    let info = null;
+    let lastError = null;
+
+    // Ordered strategies to avoid bot check challenges on datacenter cloud IP
+    const strategies = [
+      ['tv', 'web_embedded'],
+      ['web_embedded', 'tv'],
+      ['visionos', 'mweb'],
+      ['mweb', 'web_creator']
+    ];
+
+    for (const clients of strategies) {
+      try {
+        const ytdlInstance = getFreshYtdl(clients);
+        info = await ytdlInstance.getInfo(targetUrl);
+        if (info && Array.isArray(info.formats) && info.formats.length > 0) {
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`[YTDL Cloud] Strategy [${clients.join(',')}] error:`, err.message);
+      }
+    }
+
+    if (!info || !info.formats || info.formats.length === 0) {
+      const isBotCheck = lastError?.message?.includes('not a bot') || lastError?.message?.includes('BOT_CHECK') || lastError?.code === 'BOT_CHECK';
+      return res.status(isBotCheck ? 403 : 500).json({
+        error: isBotCheck ? 'YOUTUBE_BOT_CHECK' : 'STREAM_RESOLUTION_FAILED',
+        message: lastError ? lastError.message : 'No stream formats resolved',
+        hint: 'YouTube restricts cloud datacenter IPs. Connect with OmniDeck Desktop Companion (node server/index.js) running locally with yt-dlp to bypass bot challenges.'
+      });
+    }
+
+    let targetStreamFormat = null;
+    if (targetType === 'audio') {
+      const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
+      if (audioFormats.length > 0) {
         targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
       } else {
-        const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
-        if (muxed.length > 0) {
-          targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
-        } else {
-          const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
-          targetStreamFormat = videoFormats[0];
-        }
+        targetStreamFormat = info.formats.filter(f => f.hasAudio && f.url).sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+      }
+    } else {
+      const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
+      if (muxed.length > 0) {
+        targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
+      } else {
+        const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
+        targetStreamFormat = videoFormats[0] || info.formats.filter(f => f.url)[0];
+      }
+    }
+
+    if (targetStreamFormat && targetStreamFormat.url) {
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
+      res.setHeader('Content-Type', targetStreamFormat.mimeType || (targetType === 'audio' ? 'audio/mpeg' : 'video/mp4'));
+      if (targetStreamFormat.contentLength) {
+        res.setHeader('Content-Length', targetStreamFormat.contentLength);
       }
 
-      if (targetStreamFormat && targetStreamFormat.url) {
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
-        res.setHeader('Content-Type', targetStreamFormat.mimeType || (targetType === 'audio' ? 'audio/mpeg' : 'video/mp4'));
-        if (targetStreamFormat.contentLength) {
-          res.setHeader('Content-Length', targetStreamFormat.contentLength);
-        }
-
-        try {
-          const fetchRes = await fetch(targetStreamFormat.url);
-          if (fetchRes.ok && fetchRes.body) {
-            return Readable.fromWeb(fetchRes.body).pipe(res);
+      try {
+        const fetchRes = await fetch(targetStreamFormat.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Accept': '*/*',
+            'Accept-Encoding': 'identity;q=1, *;q=0',
+            'Range': req.headers.range || 'bytes=0-'
           }
-        } catch (fetchErr) {}
-
-        // Fallback direct URL redirect
-        return res.redirect(targetStreamFormat.url);
+        });
+        if (fetchRes.ok && fetchRes.body) {
+          return Readable.fromWeb(fetchRes.body).pipe(res);
+        }
+      } catch (fetchErr) {
+        console.warn('[YTDL] Direct streaming failed, fallback redirect:', fetchErr.message);
       }
-    } catch (err) {
-      return res.status(500).send('Stream resolution failed: ' + err.message);
+
+      // Fallback direct URL redirect
+      return res.redirect(targetStreamFormat.url);
     }
   }
 

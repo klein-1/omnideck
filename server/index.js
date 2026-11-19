@@ -18,7 +18,14 @@ import { Readable } from 'stream';
 import { Ytdl } from '@distube/ytdl-core';
 
 const app = express();
-const ytdl = new Ytdl();
+
+function getFreshYtdl(clients = ['tv', 'web_embedded', 'visionos', 'mweb']) {
+  const opts = { clients, timeoutMs: 25000 };
+  if (process.env.YOUTUBE_COOKIE) {
+    opts.cookie = process.env.YOUTUBE_COOKIE;
+  }
+  return new Ytdl(opts);
+}
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -227,6 +234,10 @@ app.post('/api/downloader/download', (req, res) => {
     args.push(...extras);
   }
 
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    args.push('--extractor-args', 'youtube:player_client=tv,android_vr,web');
+  }
+
   args.push(url);
 
   const isYtDlp = fs.existsSync(ytdlpPath);
@@ -379,21 +390,23 @@ async function handleServerStream(req, res) {
   }
 
   if (targetUrl) {
-    // Stream YouTube media URL via ytdl
+    // Stream YouTube media URL via fresh ytdl
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       try {
-        const info = await ytdl.getInfo(targetUrl);
+        const ytdlInstance = getFreshYtdl(['tv', 'web_embedded', 'visionos']);
+        const info = await ytdlInstance.getInfo(targetUrl);
         let targetStreamFormat = null;
         if (targetType === 'audio') {
           const audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo && f.url);
-          targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+          targetStreamFormat = audioFormats.sort((a,b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0] ||
+            info.formats.filter(f => f.hasAudio && f.url)[0];
         } else {
           const muxed = info.formats.filter(f => f.hasAudio && f.hasVideo && f.url);
           if (muxed.length > 0) {
             targetStreamFormat = muxed.sort((a,b) => (b.height || 0) - (a.height || 0))[0];
           } else {
             const videoFormats = info.formats.filter(f => f.hasVideo && f.url);
-            targetStreamFormat = videoFormats[0];
+            targetStreamFormat = videoFormats[0] || info.formats.filter(f => f.url)[0];
           }
         }
 
@@ -404,12 +417,20 @@ async function handleServerStream(req, res) {
           }
           res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanName).replace(/%20/g, ' ')}"`);
           res.setHeader('Content-Type', targetStreamFormat.mimeType || (targetType === 'audio' ? 'audio/mpeg' : 'video/mp4'));
-          const fetchRes = await fetch(targetStreamFormat.url);
+          const fetchRes = await fetch(targetStreamFormat.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              'Range': req.headers.range || 'bytes=0-'
+            }
+          });
           if (fetchRes.ok && fetchRes.body) {
             return Readable.fromWeb(fetchRes.body).pipe(res);
           }
+          return res.redirect(targetStreamFormat.url);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Server Stream YTDL] Error:', err.message);
+      }
     }
   }
 

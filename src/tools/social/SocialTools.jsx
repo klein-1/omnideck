@@ -363,7 +363,7 @@ export default function SocialTools() {
                   <img src={ogImage} alt="OG" className="w-full h-full object-cover" onError={(e) => e.target.style.display='none'} />
                 </div>
                 <div className="p-3 space-y-1 border-t border-slate-700">
-                  <div className="text-[10px] text-slate-400 uppercase font-sans tracking-wide">{ogUrl.replace(/^https?:\/\//, '').toUpperCase()}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-sans tracking-wide">{String(ogUrl || '').replace(/^https?:\/\//, '').toUpperCase()}</div>
                   <div className="text-sm font-bold text-white line-clamp-1 font-sans">{ogTitle}</div>
                   <div className="text-xs text-slate-400 line-clamp-2 leading-snug font-sans">{ogDesc}</div>
                 </div>

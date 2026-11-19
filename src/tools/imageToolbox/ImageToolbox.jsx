@@ -470,7 +470,7 @@ export default function ImageToolbox() {
               {/* Right Column: Controls for Active Subtool */}
               <div className="pixel-card bg-deck-dark p-4 space-y-4 border border-deck-border">
                 <div className="font-pixel text-[10px] text-arcade-coral border-b border-deck-border pb-2 uppercase flex items-center justify-between">
-                  <span>{activeSubTool.toUpperCase()} CONTROL DECK</span>
+                  <span>{String(activeSubTool || 'TOOL').toUpperCase()} CONTROL DECK</span>
                   <Sliders className="w-3.5 h-3.5" />
                 </div>
 

@@ -462,7 +462,7 @@ export default function GameTools() {
   const submitWordleGuess = (e) => {
     if (e) e.preventDefault();
     if (wordleStatus !== 'PLAYING') return;
-    const guess = wordleCurrent.trim().toUpperCase();
+    const guess = String(wordleCurrent || '').trim().toUpperCase();
     if (guess.length !== 5) {
       playError();
       return;

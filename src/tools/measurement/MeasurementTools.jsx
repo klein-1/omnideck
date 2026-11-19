@@ -1154,7 +1154,7 @@ export default function MeasurementTools() {
                   >
                     <div className="text-2xl">{c.emoji}</div>
                     <div className={`font-pixel text-[7px] mt-1 ${canHear ? 'text-arcade-emerald' : 'text-arcade-muted'}`}>
-                      {c.name.toUpperCase()}
+                      {String(c?.name || '').toUpperCase()}
                     </div>
                     <div className="text-[7px] text-arcade-muted mt-0.5">
                       {c.min >= 1000 ? `${(c.min/1000).toFixed(c.min >= 10000 ? 0 : 1)}k` : c.min}–{c.max >= 1000 ? `${(c.max/1000).toFixed(c.max >= 10000 ? 0 : 1)}k` : c.max}

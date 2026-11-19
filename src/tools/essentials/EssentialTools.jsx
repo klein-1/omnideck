@@ -498,7 +498,7 @@ export default function EssentialTools() {
                   {dictResult.meanings?.slice(0, 2).map((meaning, i) => (
                     <div key={i} className="space-y-1">
                       <span className="font-pixel text-[8px] bg-deck-surface border border-deck-border px-1.5 py-0.5 text-arcade-amber">
-                        {meaning.partOfSpeech.toUpperCase()}
+                        {String(meaning?.partOfSpeech || 'TERM').toUpperCase()}
                       </span>
                       <p className="text-xs mt-1">
                         {meaning.definitions?.[0]?.definition}

@@ -630,7 +630,7 @@ export default function HumanBenchmark() {
           ) : !verbalGameOver ? (
             <div className="py-8 space-y-6">
               <div className="font-pixel text-3xl text-white tracking-wider py-4 bg-deck-bg border border-deck-border">
-                {verbalCurrentWord.toUpperCase()}
+                {String(verbalCurrentWord || '').toUpperCase()}
               </div>
 
               <div className="flex gap-3">
