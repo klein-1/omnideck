@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  Ruler, Gauge, Compass, Mic, Camera, Radio, 
+  Ruler, Compass, Radio, 
   Activity, Play, Pause, RotateCcw, Volume2, Move, Eye,
   ArrowDownCircle, ArrowUpCircle, Zap, ShieldCheck, Check,
   Lock, Unlock, GripVertical
@@ -179,20 +179,26 @@ export default function MeasurementTools() {
   };
 
   // ══════════════════════════════════════════════════════════════════
-  // 2. SCREEN RULER — Complete rewrite with canvas, DPI calibration,
-  //    rotation, lock, resize, cm/inch toggle
+  // 2. SCREEN RULER & DIGITAL CALIPERS — Calibrated, Responsive & Touch
   // ══════════════════════════════════════════════════════════════════
   const [rulerUnit, setRulerUnit] = useState('cm'); // 'cm' | 'inch'
-  const [rulerPPI, setRulerPPI] = useState(96 * (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1));
+  // CSS PPI default: 96 CSS pixels = 1 inch according to W3C standard
+  const [rulerPPI, setRulerPPI] = useState(96);
   const [rulerRotation, setRulerRotation] = useState(0);
   const [rulerLocked, setRulerLocked] = useState(false);
-  const [rulerLengthCm, setRulerLengthCm] = useState(30); // logical cm length
+  const [rulerLengthCm, setRulerLengthCm] = useState(15); // sensible 15cm default
   const [showCalibration, setShowCalibration] = useState(false);
-  const [calibrationWidthPx, setCalibrationWidthPx] = useState(323); // default ~85.6mm at 96ppi
+  const [calibrationWidthPx, setCalibrationWidthPx] = useState(323); // 85.6mm at 96ppi is ~323px
+  
+  // Interactive dual calipers (in mm) for on-screen object measurement
+  const [caliperLeftMm, setCaliperLeftMm] = useState(10);
+  const [caliperRightMm, setCaliperRightMm] = useState(60);
+  const [isDraggingCaliper, setIsDraggingCaliper] = useState(null); // 'left' | 'right' | null
+
   const rulerCanvasRef = useRef(null);
   const rulerContainerRef = useRef(null);
   const rulerDragRef = useRef({ dragging: false, startX: 0, startRotation: 0 });
-  const rulerResizeRef = useRef({ resizing: false, startX: 0, startLen: 30 });
+  const rulerResizeRef = useRef({ resizing: false, startX: 0, startLen: 15 });
 
   // Compute pixel-per-cm and pixel-per-inch from PPI
   const pxPerInch = rulerPPI;
@@ -207,7 +213,7 @@ export default function MeasurementTools() {
     const totalUnits = rulerUnit === 'cm' ? rulerLengthCm : rulerLengthInch;
     const pxPerUnit = rulerUnit === 'cm' ? pxPerCm : pxPerInch;
     const canvasWidthCSS = Math.ceil(totalUnits * pxPerUnit) + 40;
-    const canvasHeightCSS = 90;
+    const canvasHeightCSS = 100;
 
     canvas.width = canvasWidthCSS * dpr;
     canvas.height = canvasHeightCSS * dpr;
@@ -238,9 +244,9 @@ export default function MeasurementTools() {
       for (let mm = 0; mm <= totalMm; mm++) {
         const x = startX + (mm / 10) * pxPerCm;
         let tickH;
-        if (mm % 10 === 0) tickH = 32;       // cm mark
+        if (mm % 10 === 0) tickH = 34;       // cm mark
         else if (mm % 5 === 0) tickH = 22;    // half-cm
-        else tickH = 14;                       // mm
+        else tickH = 14;                      // mm
 
         ctx.beginPath();
         ctx.moveTo(x, topY);
@@ -249,26 +255,26 @@ export default function MeasurementTools() {
 
         // Label every cm
         if (mm % 10 === 0) {
-          ctx.font = '11px "Press Start 2P", monospace';
+          ctx.font = '10px "Press Start 2P", monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(`${mm / 10}`, x, topY + tickH + 14);
+          ctx.fillText(`${mm / 10}`, x, topY + tickH + 15);
         }
       }
       // Unit label
       ctx.font = '9px "Press Start 2P", monospace';
       ctx.fillStyle = '#e74c3c';
       ctx.textAlign = 'left';
-      ctx.fillText('cm', startX + 4, canvasHeightCSS - 8);
+      ctx.fillText('cm / mm', startX + 4, canvasHeightCSS - 10);
     } else {
       // Draw 1/8-inch ticks
       const totalEighths = Math.round(rulerLengthInch * 8);
       for (let e = 0; e <= totalEighths; e++) {
         const x = startX + (e / 8) * pxPerInch;
         let tickH;
-        if (e % 8 === 0) tickH = 32;          // inch
+        if (e % 8 === 0) tickH = 34;          // inch
         else if (e % 4 === 0) tickH = 24;      // 1/2 inch
         else if (e % 2 === 0) tickH = 18;      // 1/4 inch
-        else tickH = 12;                        // 1/8 inch
+        else tickH = 12;                       // 1/8 inch
 
         ctx.beginPath();
         ctx.moveTo(x, topY);
@@ -276,25 +282,40 @@ export default function MeasurementTools() {
         ctx.stroke();
 
         if (e % 8 === 0) {
-          ctx.font = '11px "Press Start 2P", monospace';
+          ctx.font = '10px "Press Start 2P", monospace';
           ctx.textAlign = 'center';
           ctx.fillStyle = '#000';
-          ctx.fillText(`${e / 8}`, x, topY + tickH + 14);
+          ctx.fillText(`${e / 8}`, x, topY + tickH + 15);
         }
       }
       ctx.font = '9px "Press Start 2P", monospace';
       ctx.fillStyle = '#e74c3c';
       ctx.textAlign = 'left';
-      ctx.fillText('in', startX + 4, canvasHeightCSS - 8);
+      ctx.fillText('inch', startX + 4, canvasHeightCSS - 10);
     }
   }, [rulerUnit, rulerLengthCm, pxPerCm, pxPerInch, rulerLengthInch]);
 
   useEffect(() => { drawRuler(); }, [drawRuler]);
 
+  // Quick preset lengths
+  const setPresetLength = (cm) => {
+    setRulerLengthCm(cm);
+    if (caliperRightMm > cm * 10) setCaliperRightMm(cm * 10);
+    if (caliperLeftMm > cm * 10) setCaliperLeftMm(0);
+  };
+
+  const fitRulerToScreen = () => {
+    if (typeof window !== 'undefined') {
+      const availWidth = Math.max(200, window.innerWidth - 64);
+      const targetCm = Math.max(5, Math.min(50, Math.floor((availWidth - 40) / pxPerCm)));
+      setPresetLength(targetCm);
+    }
+  };
+
   // Rotation drag
   const onRotateStart = (e) => {
     if (rulerLocked) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     rulerDragRef.current = { dragging: true, startX: clientX, startRotation: rulerRotation };
     const onMove = (ev) => {
@@ -318,7 +339,7 @@ export default function MeasurementTools() {
   // Resize drag
   const onResizeStart = (e) => {
     if (rulerLocked) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     e.stopPropagation();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     rulerResizeRef.current = { resizing: true, startX: clientX, startLen: rulerLengthCm };
@@ -326,7 +347,7 @@ export default function MeasurementTools() {
       const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
       const deltaPx = cx - rulerResizeRef.current.startX;
       const deltaCm = deltaPx / pxPerCm;
-      setRulerLengthCm(Math.max(5, Math.min(50, rulerResizeRef.current.startLen + deltaCm)));
+      setRulerLengthCm(Math.max(5, Math.min(60, rulerResizeRef.current.startLen + deltaCm)));
     };
     const onUp = () => {
       rulerResizeRef.current.resizing = false;
@@ -335,6 +356,44 @@ export default function MeasurementTools() {
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onUp);
     };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+  };
+
+  // Caliper Touch Dragging
+  const handleCaliperDrag = (which, clientX) => {
+    if (!rulerContainerRef.current) return;
+    const rect = rulerContainerRef.current.getBoundingClientRect();
+    const relX = clientX - rect.left - 20; // 20px is startX
+    const mm = Math.max(0, Math.min(rulerLengthCm * 10, Math.round((relX / pxPerCm) * 10)));
+    if (which === 'left') {
+      setCaliperLeftMm(Math.min(mm, caliperRightMm - 1));
+    } else {
+      setCaliperRightMm(Math.max(mm, caliperLeftMm + 1));
+    }
+  };
+
+  const startCaliperDrag = (which, e) => {
+    if (rulerLocked) return;
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCaliper(which);
+
+    const onMove = (ev) => {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      handleCaliperDrag(which, cx);
+    };
+
+    const onUp = () => {
+      setIsDraggingCaliper(null);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchmove', onMove, { passive: false });
@@ -351,18 +410,25 @@ export default function MeasurementTools() {
   };
 
   // ══════════════════════════════════════════════════════════════════
-  // 3. PROTRACTOR — resizable with detailed markings
+  // 3. PROTRACTOR — Responsive, Touch-Calibrated & Angle Presets
   // ══════════════════════════════════════════════════════════════════
   const [angle, setAngle] = useState(45);
-  const [protractorRadius, setProtractorRadius] = useState(160);
-  const protractorRef = useRef(null);
+  // Auto-fit radius to screen so it never overflows mobile screens
+  const [protractorRadius, setProtractorRadius] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.min(150, Math.max(90, Math.floor((window.innerWidth - 64) / 2)));
+    }
+    return 140;
+  });
   const protractorCanvasRef = useRef(null);
 
   const calculateProtractorAngle = (clientX, clientY) => {
-    if (!protractorRef.current) return;
-    const rect = protractorRef.current.getBoundingClientRect();
+    const canvas = protractorCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + protractorRadius;
+    // Accurate vertical center for baseline
+    const centerY = rect.top + (rect.height * (protractorRadius + 5) / (protractorRadius + 30));
     const dx = clientX - centerX;
     const dy = centerY - clientY;
     let rad = Math.atan2(dy, dx);
@@ -375,8 +441,10 @@ export default function MeasurementTools() {
   const handleProtractorMove = (e) => {
     calculateProtractorAngle(e.clientX, e.clientY);
   };
+
   const handleProtractorTouch = (e) => {
     if (e.touches && e.touches[0]) {
+      if (e.cancelable) e.preventDefault();
       calculateProtractorAngle(e.touches[0].clientX, e.touches[0].clientY);
     }
   };
@@ -438,7 +506,7 @@ export default function MeasurementTools() {
         const labelR = r - 30;
         const lx = cx + cos * labelR;
         const ly = cy - sin * labelR;
-        ctx.font = deg % 30 === 0 ? 'bold 10px "Press Start 2P", monospace' : '8px "Press Start 2P", monospace';
+        ctx.font = deg % 30 === 0 ? 'bold 9px "Press Start 2P", monospace' : '7px "Press Start 2P", monospace';
         ctx.fillStyle = '#000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -459,7 +527,7 @@ export default function MeasurementTools() {
 
     // Center dot
     ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
     ctx.strokeStyle = '#000';
@@ -479,70 +547,6 @@ export default function MeasurementTools() {
   }, [angle, protractorRadius]);
 
   useEffect(() => { drawProtractor(); }, [drawProtractor]);
-
-  // ══════════════════════════════════════════════════════════════════
-  // 4. SPIRIT LEVEL (unchanged)
-  // ══════════════════════════════════════════════════════════════════
-  const [levelX, setLevelX] = useState(0);
-  const [levelY, setLevelY] = useState(0);
-
-  useEffect(() => {
-    const handleOrientation = (e) => {
-      if (e.gamma !== null && e.beta !== null) {
-        setLevelX(Math.max(-45, Math.min(45, Math.round(e.gamma))));
-        setLevelY(Math.max(-45, Math.min(45, Math.round(e.beta))));
-      }
-    };
-    window.addEventListener('deviceorientation', handleOrientation);
-    return () => window.removeEventListener('deviceorientation', handleOrientation);
-  }, []);
-
-  // ══════════════════════════════════════════════════════════════════
-  // 5. DECIBEL METER (unchanged)
-  // ══════════════════════════════════════════════════════════════════
-  const [decibels, setDecibels] = useState(0);
-  const [isMicActive, setIsMicActive] = useState(false);
-  const micAudioCtxRef = useRef(null);
-
-  const startMic = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AudioCtx();
-      micAudioCtxRef.current = ctx;
-
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      const source = ctx.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      setIsMicActive(true);
-      playClick();
-
-      const checkVolume = () => {
-        if (!micAudioCtxRef.current) return;
-        analyser.getByteFrequencyData(dataArray);
-        const sum = dataArray.reduce((a, b) => a + b, 0);
-        const avg = sum / dataArray.length;
-        const db = Math.round(30 + (avg / 255) * 70);
-        setDecibels(db);
-        requestAnimationFrame(checkVolume);
-      };
-      checkVolume();
-    } catch (err) {
-      alert('Microphone permission required for Decibel Meter.');
-    }
-  };
-
-  const stopMic = () => {
-    if (micAudioCtxRef.current) {
-      micAudioCtxRef.current.close().catch(() => {});
-      micAudioCtxRef.current = null;
-    }
-    setIsMicActive(false);
-    setDecibels(0);
-  };
 
   // ══════════════════════════════════════════════════════════════════
   // 6. FREQUENCY GENERATOR — Full overhaul with creature hearing grid
@@ -644,31 +648,6 @@ export default function MeasurementTools() {
   };
 
   // ══════════════════════════════════════════════════════════════════
-  // 8. MIRROR CAM (unchanged)
-  // ══════════════════════════════════════════════════════════════════
-  const [mirrorActive, setMirrorActive] = useState(false);
-  const mirrorVideoRef = useRef(null);
-
-  const startMirror = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      if (mirrorVideoRef.current) {
-        mirrorVideoRef.current.srcObject = stream;
-        setMirrorActive(true);
-      }
-    } catch (err) {
-      alert('Camera access required for Mirror tool.');
-    }
-  };
-
-  const stopMirror = () => {
-    if (mirrorVideoRef.current && mirrorVideoRef.current.srcObject) {
-      mirrorVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-    }
-    setMirrorActive(false);
-  };
-
-  // ══════════════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════════════
   return (
@@ -679,11 +658,8 @@ export default function MeasurementTools() {
           { id: 'speedtest', label: 'INTERNET SPEED', icon: Activity, activeClass: 'btn-pixel-cyan' },
           { id: 'ruler', label: 'SCREEN RULER', icon: Ruler, activeClass: 'btn-pixel-amber' },
           { id: 'protractor', label: 'PROTRACTOR', icon: Compass, activeClass: 'btn-pixel-purple' },
-          { id: 'level', label: 'SPIRIT LEVEL', icon: Gauge, activeClass: 'btn-pixel-emerald' },
-          { id: 'decibel', label: 'DECIBEL METER', icon: Mic, activeClass: 'btn-pixel-coral' },
           { id: 'freq', label: 'FREQ GENERATOR', icon: Radio, activeClass: 'btn-pixel-blue' },
           { id: 'bpm', label: 'BPM TAPPER', icon: Zap, activeClass: 'btn-pixel-pink' },
-          { id: 'mirror', label: 'MIRROR CAM', icon: Camera, activeClass: 'btn-pixel-teal' },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -782,14 +758,41 @@ export default function MeasurementTools() {
       )}
 
       {/* ════════════════════════════════════════════════════════════ */}
-      {/* 2. SCREEN RULER — Canvas-based, DPI-calibrated, rotatable  */}
+      {/* 2. SCREEN RULER & DIGITAL CALIPERS — Calibrated & Touch     */}
       {/* ════════════════════════════════════════════════════════════ */}
       {activeTab === 'ruler' && (
-        <div className="pixel-card p-6 space-y-5 font-mono text-xs">
+        <div className="pixel-card p-4 sm:p-6 space-y-4 sm:space-y-5 font-mono text-xs w-full">
           {/* Header controls */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-deck-border pb-3">
-            <span className="font-pixel text-xs text-arcade-amber">PRECISION SCREEN RULER</span>
+            <div className="flex items-center gap-2">
+              <span className="font-pixel text-xs text-arcade-amber">SCREEN RULER & CALIPERS</span>
+              <span className="font-pixel text-[8px] bg-arcade-amber/10 text-arcade-amber border border-arcade-amber/40 px-1.5 py-0.5">
+                TOUCH READY
+              </span>
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Quick length presets */}
+              <button
+                onClick={fitRulerToScreen}
+                className="px-2 py-1 text-[8px] font-pixel border border-arcade-emerald/50 bg-arcade-emerald/10 text-arcade-emerald hover:bg-arcade-emerald hover:text-black"
+                title="Fit ruler to device screen width"
+              >
+                FIT SCREEN
+              </button>
+              {[10, 15, 20, 30].map(cm => (
+                <button
+                  key={cm}
+                  onClick={() => setPresetLength(cm)}
+                  className={`px-2 py-1 text-[8px] font-pixel border ${
+                    rulerLengthCm === cm
+                      ? 'bg-arcade-amber text-black border-black'
+                      : 'border-deck-border bg-deck-bg text-arcade-muted hover:text-white'
+                  }`}
+                >
+                  {cm}CM
+                </button>
+              ))}
+
               {/* Unit toggle */}
               <div className="flex items-center border border-deck-border">
                 <button
@@ -801,6 +804,7 @@ export default function MeasurementTools() {
                   className={`px-2 py-1 text-[9px] font-pixel ${rulerUnit === 'inch' ? 'bg-arcade-amber text-black' : 'bg-deck-bg text-arcade-muted'}`}
                 >INCH</button>
               </div>
+
               {/* Lock toggle */}
               <button
                 onClick={() => { setRulerLocked(!rulerLocked); playClick(); }}
@@ -811,6 +815,7 @@ export default function MeasurementTools() {
                 {rulerLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                 {rulerLocked ? 'LOCKED' : 'UNLOCKED'}
               </button>
+
               {/* Calibrate */}
               <button
                 onClick={() => { setShowCalibration(!showCalibration); playClick(); }}
@@ -821,23 +826,55 @@ export default function MeasurementTools() {
             </div>
           </div>
 
+          {/* Caliper Measurement Readout Banner */}
+          <div className="p-3 bg-deck-bg border-2 border-black shadow-pixel flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="space-y-0.5 text-center sm:text-left">
+              <span className="text-[9px] text-arcade-muted uppercase font-pixel block">PHYSICAL OBJECT CALIPER DISTANCE</span>
+              <div className="font-pixel text-xl sm:text-2xl text-arcade-cyan">
+                {(Math.abs(caliperRightMm - caliperLeftMm) / 10).toFixed(2)}{' '}
+                <span className="text-xs text-arcade-paper">cm</span>
+                <span className="text-arcade-muted mx-2 font-mono text-sm">/</span>
+                {((Math.abs(caliperRightMm - caliperLeftMm) / 10) / 2.54).toFixed(3)}{' '}
+                <span className="text-xs text-arcade-paper">in</span>
+                <span className="text-arcade-muted mx-2 font-mono text-sm">/</span>
+                <span className="text-arcade-emerald">{Math.abs(caliperRightMm - caliperLeftMm)}</span>{' '}
+                <span className="text-xs text-arcade-paper">mm</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setCaliperLeftMm(0); setCaliperRightMm(Math.round(rulerLengthCm * 10)); playClick(); }}
+                className="btn-pixel btn-pixel-surface px-2.5 py-1 text-[8px] font-pixel text-arcade-muted hover:text-white"
+              >
+                SPAN RULER
+              </button>
+              <button
+                onClick={() => { setCaliperLeftMm(10); setCaliperRightMm(60); playClick(); }}
+                className="btn-pixel btn-pixel-cyan px-2.5 py-1 text-[8px] font-pixel"
+              >
+                RESET CALIPERS
+              </button>
+            </div>
+          </div>
+
           {/* Calibration panel */}
           {showCalibration && (
             <div className="bg-deck-bg border-2 border-black p-4 space-y-3">
-              <div className="font-pixel text-[10px] text-arcade-cyan">CREDIT CARD CALIBRATION</div>
+              <div className="font-pixel text-[10px] text-arcade-cyan">PHYSICAL CARD CALIBRATION</div>
               <p className="text-arcade-muted text-[10px]">
-                Place a standard credit card on screen. Drag the slider until the outline matches your card exactly (85.6mm wide).
+                Place any standard debit/credit/ID card on the screen. Adjust slider until outline matches your card (85.6mm wide).
               </p>
-              <div className="flex items-center justify-center py-4">
+              <div className="flex items-center justify-center py-4 overflow-x-auto">
                 <div
-                  className="border-2 border-dashed border-arcade-cyan rounded-lg flex items-center justify-center"
+                  className="border-2 border-dashed border-arcade-cyan rounded-lg flex items-center justify-center bg-arcade-cyan/5 transition-all"
                   style={{ width: calibrationWidthPx + 'px', height: Math.round(calibrationWidthPx * (53.98/85.6)) + 'px' }}
                 >
-                  <span className="text-arcade-cyan text-[8px] font-pixel">CREDIT CARD</span>
+                  <span className="text-arcade-cyan text-[8px] font-pixel text-center px-2">STANDARD CARD (85.6mm)</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[9px] text-arcade-muted shrink-0">SIZE:</span>
+                <span className="text-[9px] text-arcade-muted shrink-0">WIDTH:</span>
                 <input
                   type="range"
                   min="200"
@@ -861,70 +898,177 @@ export default function MeasurementTools() {
                 />
                 <span className="text-[8px] text-arcade-muted">px</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={applyCalibration}
                   className="btn-pixel btn-pixel-cyan px-4 py-1.5 font-pixel text-[9px] flex items-center gap-1"
                 >
-                  <Check className="w-3 h-3" /> APPLY
+                  <Check className="w-3 h-3" /> APPLY CALIBRATION
+                </button>
+                <button
+                  onClick={() => { setRulerPPI(96); setCalibrationWidthPx(323); setShowCalibration(false); playClick(); }}
+                  className="text-[9px] text-arcade-muted hover:text-arcade-coral border border-deck-border px-2 py-1"
+                >
+                  RESET DEFAULT (96 PPI)
                 </button>
                 <span className="text-[9px] text-arcade-muted">
-                  Detected PPI: {rulerPPI.toFixed(1)}
+                  Current PPI: {rulerPPI.toFixed(1)}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Rotation & info bar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[9px] text-arcade-muted">ROTATION:</span>
-              <span className="font-pixel text-[10px] text-arcade-amber">{Math.round(rulerRotation)}°</span>
+          {/* Quick rotation buttons & info */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9px] text-arcade-muted mr-1">ROTATE:</span>
+              {[0, 45, 90, 180].map(deg => (
+                <button
+                  key={deg}
+                  onClick={() => { if (!rulerLocked) { setRulerRotation(deg); playClick(); } }}
+                  disabled={rulerLocked}
+                  className={`px-2 py-0.5 text-[8px] font-pixel border ${
+                    rulerRotation === deg
+                      ? 'bg-arcade-amber text-black border-black'
+                      : 'border-deck-border bg-deck-bg text-arcade-muted hover:text-white'
+                  }`}
+                >
+                  {deg}°
+                </button>
+              ))}
               <button
                 onClick={() => { if (!rulerLocked) setRulerRotation(0); }}
-                className="text-[8px] text-arcade-muted hover:text-arcade-amber border border-deck-border px-1.5 py-0.5"
+                className="text-[8px] text-arcade-muted hover:text-arcade-amber border border-deck-border px-1.5 py-0.5 flex items-center gap-1"
                 disabled={rulerLocked}
-              ><RotateCcw className="w-3 h-3 inline" /> RESET</button>
+              >
+                <RotateCcw className="w-3 h-3 inline" /> 0°
+              </button>
             </div>
-            <div className="font-pixel text-sm text-arcade-emerald">
-              {rulerUnit === 'cm'
-                ? `${rulerLengthCm.toFixed(1)} cm`
-                : `${rulerLengthInch.toFixed(2)} in`
-              } | PPI: {rulerPPI.toFixed(0)}
+
+            <div className="font-pixel text-xs text-arcade-emerald">
+              TOTAL: {rulerUnit === 'cm' ? `${rulerLengthCm.toFixed(1)} cm` : `${rulerLengthInch.toFixed(2)} in`}
             </div>
           </div>
 
-          {/* Ruler canvas container with rotation */}
-          <div className="overflow-x-auto pb-4">
+          {/* Caliper Sliders (Direct Touch Controls) */}
+          <div className="p-3 bg-deck-bg/60 border border-deck-border space-y-2">
+            <div className="text-[9px] text-arcade-muted font-pixel">TOUCH CALIPER SLIDERS (PLACE OBJECT ON SCREEN & ALIGN):</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-arcade-cyan border border-black inline-block shrink-0"></span>
+                <span className="text-[9px] text-arcade-cyan font-pixel shrink-0">NEEDLE A:</span>
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.round(rulerLengthCm * 10)}
+                  value={caliperLeftMm}
+                  onChange={(e) => setCaliperLeftMm(Math.min(Number(e.target.value), caliperRightMm - 1))}
+                  className="flex-1 accent-arcade-cyan"
+                />
+                <span className="font-pixel text-[9px] text-arcade-cyan w-12 text-right">{(caliperLeftMm / 10).toFixed(1)}cm</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-arcade-coral border border-black inline-block shrink-0"></span>
+                <span className="text-[9px] text-arcade-coral font-pixel shrink-0">NEEDLE B:</span>
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.round(rulerLengthCm * 10)}
+                  value={caliperRightMm}
+                  onChange={(e) => setCaliperRightMm(Math.max(Number(e.target.value), caliperLeftMm + 1))}
+                  className="flex-1 accent-arcade-coral"
+                />
+                <span className="font-pixel text-[9px] text-arcade-coral w-12 text-right">{(caliperRightMm / 10).toFixed(1)}cm</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Ruler canvas container with rotation & caliper markers */}
+          <div className="overflow-x-auto pb-4 pt-2 touch-scroll">
             <div
               ref={rulerContainerRef}
               className="relative inline-block select-none"
-              style={{ transform: `rotate(${rulerRotation}deg)`, transformOrigin: '20px 45px' }}
+              style={{ transform: `rotate(${rulerRotation}deg)`, transformOrigin: '20px 50px' }}
             >
               <canvas
                 ref={rulerCanvasRef}
-                className="block cursor-grab active:cursor-grabbing"
+                className="block shadow-pixel"
               />
+
+              {/* Caliper Needle A (Left) */}
+              <div
+                style={{ left: `${20 + (caliperLeftMm / 10) * pxPerCm}px` }}
+                className="absolute top-0 bottom-0 w-0.5 bg-arcade-cyan z-20 pointer-events-none"
+              >
+                <div
+                  onMouseDown={(e) => startCaliperDrag('left', e)}
+                  onTouchStart={(e) => startCaliperDrag('left', e)}
+                  className="pointer-events-auto -translate-x-1/2 -top-3 absolute w-7 h-7 bg-arcade-cyan text-black border-2 border-black flex items-center justify-center font-pixel text-[8px] shadow-pixel-sm cursor-ew-resize active:scale-125 transition-transform"
+                  title="Drag Caliper Needle A"
+                >
+                  A
+                </div>
+                <div
+                  onMouseDown={(e) => startCaliperDrag('left', e)}
+                  onTouchStart={(e) => startCaliperDrag('left', e)}
+                  className="pointer-events-auto -translate-x-1/2 -bottom-3 absolute w-7 h-7 bg-arcade-cyan text-black border-2 border-black flex items-center justify-center font-pixel text-[8px] shadow-pixel-sm cursor-ew-resize active:scale-125 transition-transform"
+                >
+                  ▲
+                </div>
+              </div>
+
+              {/* Caliper Needle B (Right) */}
+              <div
+                style={{ left: `${20 + (caliperRightMm / 10) * pxPerCm}px` }}
+                className="absolute top-0 bottom-0 w-0.5 bg-arcade-coral z-20 pointer-events-none"
+              >
+                <div
+                  onMouseDown={(e) => startCaliperDrag('right', e)}
+                  onTouchStart={(e) => startCaliperDrag('right', e)}
+                  className="pointer-events-auto -translate-x-1/2 -top-3 absolute w-7 h-7 bg-arcade-coral text-white border-2 border-black flex items-center justify-center font-pixel text-[8px] shadow-pixel-sm cursor-ew-resize active:scale-125 transition-transform"
+                  title="Drag Caliper Needle B"
+                >
+                  B
+                </div>
+                <div
+                  onMouseDown={(e) => startCaliperDrag('right', e)}
+                  onTouchStart={(e) => startCaliperDrag('right', e)}
+                  className="pointer-events-auto -translate-x-1/2 -bottom-3 absolute w-7 h-7 bg-arcade-coral text-white border-2 border-black flex items-center justify-center font-pixel text-[8px] shadow-pixel-sm cursor-ew-resize active:scale-125 transition-transform"
+                >
+                  ▲
+                </div>
+              </div>
+
+              {/* Shaded Measured Caliper Span */}
+              <div
+                style={{
+                  left: `${20 + (Math.min(caliperLeftMm, caliperRightMm) / 10) * pxPerCm}px`,
+                  width: `${(Math.abs(caliperRightMm - caliperLeftMm) / 10) * pxPerCm}px`
+                }}
+                className="absolute top-0 bottom-0 bg-arcade-cyan/15 border-t-2 border-b-2 border-arcade-cyan/40 pointer-events-none z-10"
+              />
+
               {/* Rotation handle (top-left) */}
               {!rulerLocked && (
                 <div
                   onMouseDown={onRotateStart}
                   onTouchStart={onRotateStart}
-                  className="absolute -top-3 -left-3 w-7 h-7 bg-arcade-amber border-2 border-black rounded-full cursor-grab flex items-center justify-center shadow-pixel-sm z-10 hover:scale-110 transition-transform"
-                  title="Drag to rotate"
+                  className="absolute -top-3 -left-3 w-8 h-8 bg-arcade-amber border-2 border-black rounded-full cursor-grab flex items-center justify-center shadow-pixel-sm z-30 hover:scale-110 active:scale-125 transition-transform touch-none"
+                  title="Drag to rotate ruler"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-black" />
+                  <RotateCcw className="w-4 h-4 text-black" />
                 </div>
               )}
+
               {/* Resize handle (right edge) */}
               {!rulerLocked && (
                 <div
                   onMouseDown={onResizeStart}
                   onTouchStart={onResizeStart}
-                  className="absolute top-1/2 -right-2 -translate-y-1/2 w-5 h-12 bg-arcade-coral border-2 border-black cursor-ew-resize flex items-center justify-center shadow-pixel-sm z-10 hover:scale-110 transition-transform"
-                  title="Drag to resize"
+                  className="absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-14 bg-arcade-coral border-2 border-black cursor-ew-resize flex items-center justify-center shadow-pixel-sm z-30 hover:scale-110 active:scale-125 transition-transform touch-none"
+                  title="Drag to resize ruler length"
                 >
-                  <GripVertical className="w-3 h-3 text-white" />
+                  <GripVertical className="w-3.5 h-3.5 text-white" />
                 </div>
               )}
             </div>
@@ -933,115 +1077,92 @@ export default function MeasurementTools() {
       )}
 
       {/* ════════════════════════════════════════════════════════════ */}
-      {/* 3. PROTRACTOR — canvas-based, resizable                     */}
+      {/* 3. PROTRACTOR — Responsive, Touch-Calibrated & Angle Presets */}
       {/* ════════════════════════════════════════════════════════════ */}
       {activeTab === 'protractor' && (
-        <div className="max-w-lg mx-auto pixel-card p-6 space-y-4 font-mono text-xs text-center">
-          <div className="font-pixel text-xs text-arcade-amber">INTERACTIVE 180° PROTRACTOR</div>
-          <div className="font-pixel text-3xl text-arcade-cyan py-2">
-            {angle}° ANGLE
+        <div className="w-full max-w-2xl mx-auto pixel-card p-4 sm:p-6 space-y-4 font-mono text-xs text-center">
+          <div className="flex items-center justify-between border-b border-deck-border pb-2">
+            <span className="font-pixel text-xs text-arcade-amber">180° TOUCH PROTRACTOR</span>
+            <span className="font-pixel text-[8px] text-arcade-purple bg-arcade-purple/10 border border-arcade-purple/40 px-1.5 py-0.5">
+              TOUCH & DRAG
+            </span>
           </div>
 
-          {/* Resize slider */}
-          <div className="flex items-center gap-3 justify-center">
-            <span className="text-[9px] text-arcade-muted">SIZE:</span>
+          {/* Prominent Angle Readout */}
+          <div className="bg-deck-bg border-2 border-black py-4 shadow-pixel space-y-1">
+            <div className="font-pixel text-4xl sm:text-5xl text-arcade-cyan">
+              {angle}°
+            </div>
+            <div className="text-[10px] text-arcade-muted font-pixel">
+              {angle === 90 ? 'PERFECT RIGHT ANGLE (90°)' : angle === 45 ? 'ACUTE ANGLE (45°)' : angle === 180 ? 'STRAIGHT LINE (180°)' : angle < 90 ? `ACUTE ANGLE (${angle}°)` : `OBTUSE ANGLE (${angle}°)`}
+            </div>
+          </div>
+
+          {/* Quick Angle Preset Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+            <span className="text-[9px] text-arcade-muted mr-1">PRESETS:</span>
+            {[0, 30, 45, 60, 90, 120, 135, 150, 180].map(deg => (
+              <button
+                key={deg}
+                onClick={() => { setAngle(deg); playClick(); }}
+                className={`px-2 py-1 text-[8px] font-pixel border ${
+                  angle === deg
+                    ? 'bg-arcade-cyan text-black border-black font-bold'
+                    : 'bg-deck-bg border-deck-border text-arcade-muted hover:text-white'
+                }`}
+              >
+                {deg}°
+              </button>
+            ))}
+          </div>
+
+          {/* Fine Tuning Buttons */}
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="text-[9px] text-arcade-muted mr-1">NUDGE:</span>
+            <button
+              onClick={() => { setAngle(a => Math.max(0, a - 5)); playClick(); }}
+              className="btn-pixel btn-pixel-surface px-2 py-1 font-pixel text-[8px]"
+            >-5°</button>
+            <button
+              onClick={() => { setAngle(a => Math.max(0, a - 1)); playClick(); }}
+              className="btn-pixel btn-pixel-surface px-2 py-1 font-pixel text-[8px]"
+            >-1°</button>
+            <button
+              onClick={() => { setAngle(a => Math.min(180, a + 1)); playClick(); }}
+              className="btn-pixel btn-pixel-surface px-2 py-1 font-pixel text-[8px]"
+            >+1°</button>
+            <button
+              onClick={() => { setAngle(a => Math.min(180, a + 5)); playClick(); }}
+              className="btn-pixel btn-pixel-surface px-2 py-1 font-pixel text-[8px]"
+            >+5°</button>
+          </div>
+
+          {/* Size presets slider */}
+          <div className="flex items-center gap-3 justify-center max-w-sm mx-auto">
+            <span className="text-[9px] text-arcade-muted shrink-0">SIZE:</span>
             <input
               type="range"
-              min="80"
-              max="300"
+              min="90"
+              max="240"
               value={protractorRadius}
               onChange={(e) => setProtractorRadius(Number(e.target.value))}
-              className="w-40 accent-arcade-purple"
+              className="flex-1 accent-arcade-purple"
             />
-            <input
-              type="number"
-              min={80}
-              max={300}
-              value={protractorRadius}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '') return;
-                const n = parseInt(v, 10);
-                if (!isNaN(n)) setProtractorRadius(Math.max(80, Math.min(300, n)));
-              }}
-              className="w-14 px-1 py-0.5 text-[9px] font-pixel text-center bg-deck-bg border border-deck-border text-arcade-purple"
-            />
-            <span className="text-[8px] text-arcade-muted">px</span>
+            <span className="text-[9px] font-pixel text-arcade-purple w-12 text-right">{protractorRadius}px</span>
           </div>
 
+          {/* Protractor Canvas with Touch Handlers */}
           <div
-            ref={protractorRef}
             onMouseMove={handleProtractorMove}
             onTouchMove={handleProtractorTouch}
             onTouchStart={handleProtractorTouch}
-            className="inline-block cursor-pointer touch-none select-none mx-auto"
+            className="inline-block cursor-crosshair touch-none select-none mx-auto max-w-full overflow-hidden p-1"
           >
-            <canvas ref={protractorCanvasRef} />
+            <canvas ref={protractorCanvasRef} className="block shadow-pixel" />
           </div>
-          <p className="text-arcade-muted text-[11px]">Hover or drag pointer over protractor to measure angle</p>
-        </div>
-      )}
-
-      {/* 4. SPIRIT LEVEL */}
-      {activeTab === 'level' && (
-        <div className="max-w-md mx-auto pixel-card p-6 space-y-4 font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-emerald">2-AXIS BUBBLE SPIRIT LEVEL</span>
-
-          <div className="relative w-56 h-56 rounded-full border-4 border-black bg-deck-bg mx-auto shadow-pixel flex items-center justify-center overflow-hidden">
-            <div className="absolute w-full h-0.5 bg-deck-border"></div>
-            <div className="absolute h-full w-0.5 bg-deck-border"></div>
-            <div className="absolute w-20 h-20 rounded-full border border-black/30"></div>
-
-            <div
-              className="w-10 h-10 rounded-full bg-arcade-emerald border-2 border-black transition-transform duration-75"
-              style={{
-                transform: `translate(${levelX * 2}px, ${levelY * 2}px)`
-              }}
-            ></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-arcade-muted">
-            <div className="p-2 bg-deck-bg border border-deck-border">
-              ROLL (X): <strong className="text-arcade-emerald font-pixel">{levelX}°</strong>
-            </div>
-            <div className="p-2 bg-deck-bg border border-deck-border">
-              PITCH (Y): <strong className="text-arcade-emerald font-pixel">{levelY}°</strong>
-            </div>
-          </div>
-
-          <button
-            onClick={() => { setLevelX(0); setLevelY(0); playClick(); }}
-            className="btn-pixel btn-pixel-surface w-full py-2 font-pixel text-[9px]"
-          >
-            CALIBRATE ZERO HORIZON
-          </button>
-        </div>
-      )}
-
-      {/* 5. DECIBEL METER */}
-      {activeTab === 'decibel' && (
-        <div className="max-w-md mx-auto pixel-card p-6 space-y-6 font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-coral">ACOUSTIC DECIBEL ANALYZER</span>
-
-          <div className="py-8 bg-deck-bg border-2 border-black shadow-pixel">
-            <div className="text-arcade-muted text-[10px] font-pixel">SOUND INTENSITY</div>
-            <div className="font-pixel text-5xl text-arcade-coral py-2">
-              {decibels} <span className="text-base">dB</span>
-            </div>
-            <div className="text-[11px] text-arcade-muted">
-              {decibels < 40 ? 'Quiet / Studio Whisper' : decibels < 70 ? 'Normal Ambient Speech' : 'High Noise Warning'}
-            </div>
-          </div>
-
-          <button
-            onClick={isMicActive ? stopMic : startMic}
-            className={`btn-pixel px-6 py-3 font-pixel text-xs flex items-center justify-center gap-2 mx-auto ${
-              isMicActive ? 'btn-pixel-coral' : 'btn-pixel-emerald'
-            }`}
-          >
-            <Mic className="w-4 h-4" />
-            {isMicActive ? 'STOP MONITOR' : 'START MIC SENSOR'}
-          </button>
+          <p className="text-arcade-muted text-[11px]">
+            Touch & drag finger or move cursor over protractor arc to measure exact angles.
+          </p>
         </div>
       )}
 
@@ -1184,34 +1305,6 @@ export default function MeasurementTools() {
             className="btn-pixel btn-pixel-emerald w-full py-6 font-pixel text-base select-none active:scale-95"
           >
             TAP TEMPO HERE
-          </button>
-        </div>
-      )}
-
-      {/* 8. MIRROR */}
-      {activeTab === 'mirror' && (
-        <div className="max-w-md mx-auto pixel-card p-6 space-y-4 font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-cyan">FRONT CAMERA DIGITAL MIRROR</span>
-
-          <div className="deck-viewport aspect-video flex items-center justify-center overflow-hidden">
-            <video
-              ref={mirrorVideoRef}
-              autoPlay
-              playsInline
-              className={`w-full h-full object-cover scale-x-[-1] ${mirrorActive ? 'block' : 'hidden'}`}
-            />
-            {!mirrorActive && (
-              <span className="text-arcade-muted text-xs">Camera Offline</span>
-            )}
-          </div>
-
-          <button
-            onClick={mirrorActive ? stopMirror : startMirror}
-            className={`btn-pixel px-6 py-2.5 font-pixel text-xs ${
-              mirrorActive ? 'btn-pixel-coral' : 'btn-pixel-cyan'
-            }`}
-          >
-            {mirrorActive ? 'STOP MIRROR' : 'START MIRROR'}
           </button>
         </div>
       )}

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { 
-  Download, Shield, Server, Image, FileText, Clock, 
+  Image, FileText, Clock, 
   Calculator, DollarSign, Wrench, Gauge, Type, Music, 
   Cpu, Gamepad2, Heart, Share2, Code, Zap, LayoutGrid, X,
   ChevronLeft, ChevronRight
@@ -8,48 +8,6 @@ import {
 import { playClick } from '../audio/soundEffects';
 
 export const CATEGORIES = [
-  { 
-    id: 'downloader', 
-    label: 'DOWNLOADER', 
-    icon: Download, 
-    color: 'text-red-400', 
-    activeBorder: 'border-red-400', 
-    activeBg: 'bg-red-500/15',
-    activeText: 'text-red-300',
-    badgeText: 'text-red-400',
-    badgeBorder: 'border-red-400/50',
-    badge: 'SEAL/SPOTDL', 
-    hex: '#ff4757',
-    glow: 'rgba(255, 71, 87, 0.4)'
-  },
-  { 
-    id: 'urlChecker', 
-    label: 'URL CHECKER', 
-    icon: Shield, 
-    color: 'text-cyan-400', 
-    activeBorder: 'border-cyan-400', 
-    activeBg: 'bg-cyan-500/15',
-    activeText: 'text-cyan-300',
-    badgeText: 'text-cyan-400',
-    badgeBorder: 'border-cyan-400/50',
-    badge: 'SAFETY', 
-    hex: '#00f0ff',
-    glow: 'rgba(0, 240, 255, 0.4)'
-  },
-  { 
-    id: 'shttps', 
-    label: 'LOCAL SHTTPS', 
-    icon: Server, 
-    color: 'text-amber-400', 
-    activeBorder: 'border-amber-400', 
-    activeBg: 'bg-amber-500/15',
-    activeText: 'text-amber-300',
-    badgeText: 'text-amber-400',
-    badgeBorder: 'border-amber-400/50',
-    badge: 'SERVER', 
-    hex: '#ffb703',
-    glow: 'rgba(255, 183, 3, 0.4)'
-  },
   { 
     id: 'imageToolbox', 
     label: 'IMAGE STUDIO', 
@@ -144,7 +102,7 @@ export const CATEGORIES = [
     activeText: 'text-rose-300',
     badgeText: 'text-rose-400',
     badgeBorder: 'border-rose-400/50',
-    badge: '16 TOOLS', 
+    badge: '5 TOOLS', 
     hex: '#f43f5e',
     glow: 'rgba(244, 63, 94, 0.4)'
   },
@@ -172,7 +130,7 @@ export const CATEGORIES = [
     activeText: 'text-fuchsia-300',
     badgeText: 'text-fuchsia-400',
     badgeBorder: 'border-fuchsia-400/50',
-    badge: '8 TOOLS', 
+    badge: '5 TOOLS', 
     hex: '#d946ef',
     glow: 'rgba(217, 70, 239, 0.4)'
   },
@@ -288,7 +246,7 @@ export default function Navigation({ activeCategory, onSelectCategory }) {
   return (
     <>
       <nav className="border-b border-deck-border bg-deck-surface/70 backdrop-blur-md relative">
-        <div className="max-w-7xl mx-auto flex items-center">
+        <div className="w-full flex items-center">
           {/* Quick Mobile/Tablet Category Grid Opener */}
           <button
             onClick={() => { playClick(); setIsGridOpen(true); }}

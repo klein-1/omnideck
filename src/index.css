@@ -578,24 +578,6 @@ canvas {
   }
 }
 
-/* Responsive viewports simulator frames */
-.viewport-simulate-mobile {
-  max-width: 390px !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  border-left: 3px solid #00ff88;
-  border-right: 3px solid #00ff88;
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
-}
-
-.viewport-simulate-tablet {
-  max-width: 820px !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  border-left: 3px solid #00f0ff;
-  border-right: 3px solid #00f0ff;
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
-}
 
 /* ==============================================================
    SUBTLE TACTILE QUALITY-OF-LIFE ANIMATIONS & MINIMALIST POLISH
@@ -638,3 +620,45 @@ input:focus, textarea:focus, select:focus {
 }
 
 
+
+/* Mobile fullscreen canvas fix */
+@media screen and (max-width: 640px) {
+  canvas {
+    touch-action: none;
+  }
+  
+  .pixel-card {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  input[type="range"] {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* Fullscreen screen real estate optimization across desktop and tablets */
+main {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+@media screen and (min-width: 768px) {
+  main .max-w-md,
+  main .max-w-lg,
+  main .max-w-xl,
+  main .max-w-2xl {
+    max-width: 100% !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

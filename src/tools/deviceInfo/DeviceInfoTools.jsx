@@ -222,6 +222,7 @@ export default function DeviceInfoTools() {
   // 4. KEYBOARD ROLLOVER & KEY CODE TESTER
   const [lastKeyEvent, setLastKeyEvent] = useState(null);
   const [pressedKeys, setPressedKeys] = useState(new Set());
+  const mobileInputRef = useRef(null);
 
   useEffect(() => {
     const handleDown = (e) => {
@@ -550,7 +551,7 @@ export default function DeviceInfoTools() {
 
       {/* 4. KEYBOARD ROLLOVER & KEY CODES */}
       {activeTab === 'keyboard' && (
-        <div className="max-w-xl mx-auto pixel-card p-6 space-y-6 font-mono text-xs text-center">
+        <div className="w-full max-w-2xl mx-auto pixel-card p-4 sm:p-6 space-y-4 sm:space-y-6 font-mono text-xs text-center">
           <div className="flex justify-between items-center border-b border-deck-border pb-2">
             <span className="font-pixel text-xs text-arcade-amber">KEYBOARD ROLLOVER & KEY CODE TESTER</span>
             <span className="font-pixel text-[9px] text-arcade-emerald">{pressedKeys.size} ACTIVE KEYS</span>
@@ -559,6 +560,24 @@ export default function DeviceInfoTools() {
           <p className="text-slate-500 text-xs">
             Press any keys on your keyboard to inspect JavaScript event codes and test anti-ghosting rollover.
           </p>
+
+          <input
+            ref={mobileInputRef}
+            type="text"
+            className="opacity-0 absolute -z-10 h-0 w-0"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            aria-hidden="true"
+          />
+
+          <button
+            type="button"
+            onClick={() => { if (mobileInputRef.current) mobileInputRef.current.focus(); playClick(); }}
+            className="btn-pixel btn-pixel-amber px-4 py-2 font-pixel text-[9px] flex sm:hidden items-center justify-center gap-2 mx-auto active:scale-95"
+          >
+            <Keyboard className="w-3.5 h-3.5" /> TAP TO SUMMON MOBILE KEYBOARD
+          </button>
 
           <div className="p-6 bg-deck-bg border-2 border-black shadow-pixel min-h-[140px] flex flex-col justify-center items-center gap-3">
             {lastKeyEvent ? (

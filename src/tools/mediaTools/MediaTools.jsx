@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Music, Mic, Scissors, Video, Download, Play, 
-  Pause, Square, Trash2, PenTool, FileAudio, Check,
+  Music, Download, Play, 
+  Pause, Trash2, PenTool, Check,
   Camera, Sliders, Volume2, Palette, Clock, Radio, Eye
 } from 'lucide-react';
 import { playClick, playSuccess, playCoin, playBeep } from '../../audio/soundEffects';
 
 export default function MediaTools() {
-  const [activeTab, setActiveTab] = useState('recorder'); 
-  // 'recorder' | 'screenrec' | 'synth' | 'visualizer' | 'palette' | 'videograb' | 'metronome' | 'drawing'
+  const [activeTab, setActiveTab] = useState('synth'); 
+  // 'synth' | 'palette' | 'videograb' | 'metronome' | 'drawing'
 
   const [copied, setCopied] = useState(false);
   const copyText = (txt) => {
@@ -18,110 +18,7 @@ export default function MediaTools() {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // 1. AUDIO RECORDER
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordTime, setRecordTime] = useState(0);
-  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        setRecordedAudioUrl(URL.createObjectURL(audioBlob));
-        playSuccess();
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-      setRecordTime(0);
-      playClick();
-    } catch (e) {
-      alert('Microphone access is required to record audio.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      setIsRecording(false);
-      playClick();
-    }
-  };
-
-  useEffect(() => {
-    let timer = null;
-    if (isRecording) {
-      timer = setInterval(() => setRecordTime(t => t + 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isRecording]);
-
-  // 2. SCREEN RECORDER
-  const [isScreenRecording, setIsScreenRecording] = useState(false);
-  const [screenRecordTime, setScreenRecordTime] = useState(0);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
-  const screenRecorderRef = useRef(null);
-  const screenChunksRef = useRef([]);
-
-  const startScreenRecord = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      screenRecorderRef.current = new MediaRecorder(stream);
-      screenChunksRef.current = [];
-
-      screenRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) screenChunksRef.current.push(e.data);
-      };
-
-      screenRecorderRef.current.onstop = () => {
-        const videoBlob = new Blob(screenChunksRef.current, { type: 'video/webm' });
-        setRecordedVideoUrl(URL.createObjectURL(videoBlob));
-        playSuccess();
-      };
-
-      // Handle user stopping share via browser native UI
-      stream.getVideoTracks()[0].onended = () => {
-        stopScreenRecord();
-      };
-
-      screenRecorderRef.current.start();
-      setIsScreenRecording(true);
-      setScreenRecordTime(0);
-      playClick();
-    } catch (e) {
-      // User cancelled or no permissions
-    }
-  };
-
-  const stopScreenRecord = () => {
-    if (screenRecorderRef.current && isScreenRecording) {
-      screenRecorderRef.current.stop();
-      screenRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      setIsScreenRecording(false);
-      playClick();
-    }
-  };
-
-  useEffect(() => {
-    let timer = null;
-    if (isScreenRecording) {
-      timer = setInterval(() => setScreenRecordTime(t => t + 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isScreenRecording]);
-
-  // 3. 8-BIT RETRO SYNTHESIZER
+  // 1. 8-BIT RETRO SYNTHESIZER
   const [synthWave, setSynthWave] = useState('square'); // 'square' | 'sawtooth' | 'triangle' | 'sine'
   const [synthOctave, setSynthOctave] = useState(4);
   const synthCtxRef = useRef(null);
@@ -166,62 +63,7 @@ export default function MediaTools() {
     } catch {}
   };
 
-  // 4. LIVE AUDIO VISUALIZER & OSCILLOSCOPE
-  const [visActive, setVisActive] = useState(false);
-  const visCanvasRef = useRef(null);
-  const visStreamRef = useRef(null);
-  const visAnimRef = useRef(null);
-
-  const startVisualizer = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      visStreamRef.current = stream;
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      source.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const canvas = visCanvasRef.current;
-      if (!canvas) return;
-      const canvasCtx = canvas.getContext('2d');
-
-      const draw = () => {
-        visAnimRef.current = requestAnimationFrame(draw);
-        analyser.getByteFrequencyData(dataArray);
-
-        canvasCtx.fillStyle = '#080a0f';
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / bufferLength) - 2;
-        let x = 1;
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * canvas.height;
-          canvasCtx.fillStyle = i % 2 === 0 ? '#00ff88' : '#00f0ff';
-          canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-          x += barWidth + 2;
-        }
-      };
-      draw();
-      setVisActive(true);
-      playClick();
-    } catch (e) {
-      alert('Microphone access is required to run the audio visualizer.');
-    }
-  };
-
-  const stopVisualizer = () => {
-    if (visAnimRef.current) cancelAnimationFrame(visAnimRef.current);
-    if (visStreamRef.current) visStreamRef.current.getTracks().forEach(t => t.stop());
-    setVisActive(false);
-    playClick();
-  };
-
-  // 5. COLOR PALETTE GENERATOR & EYEDROPPER
+  // 2. COLOR PALETTE GENERATOR & EYEDROPPER
   const [palette, setPalette] = useState(['#080a0f', '#00ff88', '#00f0ff', '#ffb703', '#ff4757']);
   const [pickedColor, setPickedColor] = useState('');
 
@@ -245,7 +87,7 @@ export default function MediaTools() {
     }
   };
 
-  // 6. VIDEO FRAME GRABBER
+  // 3. VIDEO FRAME GRABBER
   const [videoFileUrl, setVideoFileUrl] = useState(null);
   const [capturedFrameUrl, setCapturedFrameUrl] = useState(null);
   const videoElemRef = useRef(null);
@@ -358,14 +200,11 @@ export default function MediaTools() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 w-full">
       {/* Subtool Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b-2 border-deck-border pb-3">
         {[
-          { id: 'recorder', label: 'AUDIO RECORDER', icon: Mic, activeClass: 'btn-pixel-pink' },
-          { id: 'screenrec', label: 'SCREEN RECORDER', icon: Video, activeClass: 'btn-pixel-coral' },
           { id: 'synth', label: '8-BIT SYNTHESIZER', icon: Music, activeClass: 'btn-pixel-cyan' },
-          { id: 'visualizer', label: 'SPECTRUM VISUALIZER', icon: Radio, activeClass: 'btn-pixel-emerald' },
           { id: 'palette', label: 'COLOR PALETTE', icon: Palette, activeClass: 'btn-pixel-amber' },
           { id: 'videograb', label: 'VIDEO FRAME GRAB', icon: Camera, activeClass: 'btn-pixel-blue' },
           { id: 'metronome', label: 'BPM METRONOME', icon: Clock, activeClass: 'btn-pixel-purple' },
@@ -388,104 +227,20 @@ export default function MediaTools() {
         })}
       </div>
 
-      {/* 1. AUDIO RECORDER */}
-      {activeTab === 'recorder' && (
-        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
-          <span className="font-pixel text-[10px] text-arcade-emerald uppercase">HI-FI MICROPHONE RECORDER</span>
-
-          <div className="py-6 bg-deck-bg border-2 border-black shadow-pixel">
-            <div className={`font-pixel text-4xl py-2 ${isRecording ? 'text-arcade-coral animate-pulse' : 'text-white'}`}>
-              {Math.floor(recordTime / 60).toString().padStart(2, '0')}:
-              {(recordTime % 60).toString().padStart(2, '0')}
-            </div>
-            <div className="text-[10px] text-arcade-muted font-pixel">
-              {isRecording ? '● LIVE MICROPHONE RECORDING' : 'READY TO RECORD'}
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-3">
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`btn-pixel px-6 py-3 font-pixel text-xs flex items-center gap-2 ${
-                isRecording ? 'btn-pixel-coral' : 'btn-pixel-emerald'
-              }`}
-            >
-              {isRecording ? <Square className="w-4 h-4 fill-white" /> : <Mic className="w-4 h-4" />}
-              {isRecording ? 'STOP RECORDING' : 'START RECORDING'}
-            </button>
-          </div>
-
-          {recordedAudioUrl && (
-            <div className="p-4 bg-deck-bg border border-arcade-emerald space-y-3">
-              <audio controls src={recordedAudioUrl} className="w-full" />
-              <a
-                href={recordedAudioUrl}
-                download={`recording_${Date.now()}.wav`}
-                className="btn-pixel btn-pixel-emerald px-4 py-2 font-pixel text-[9px] inline-flex items-center gap-2"
-              >
-                <Download className="w-3.5 h-3.5" /> SAVE AUDIO WAV
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 2. SCREEN RECORDER */}
-      {activeTab === 'screenrec' && (
-        <div className="max-w-xl mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
-          <span className="font-pixel text-[10px] text-arcade-coral uppercase">DESKTOP & TAB SCREEN RECORDER</span>
-
-          <div className="py-6 bg-deck-bg border-2 border-black shadow-pixel">
-            <div className={`font-pixel text-4xl py-2 ${isScreenRecording ? 'text-arcade-coral animate-pulse' : 'text-white'}`}>
-              {Math.floor(screenRecordTime / 60).toString().padStart(2, '0')}:
-              {(screenRecordTime % 60).toString().padStart(2, '0')}
-            </div>
-            <div className="text-[10px] text-arcade-muted font-pixel">
-              {isScreenRecording ? '● CAPTURING SCREEN & AUDIO' : 'READY TO RECORD DISPLAY'}
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-3">
-            <button
-              onClick={isScreenRecording ? stopScreenRecord : startScreenRecord}
-              className={`btn-pixel px-6 py-3 font-pixel text-xs flex items-center gap-2 ${
-                isScreenRecording ? 'btn-pixel-coral' : 'btn-pixel-cyan'
-              }`}
-            >
-              {isScreenRecording ? <Square className="w-4 h-4 fill-white" /> : <Video className="w-4 h-4" />}
-              {isScreenRecording ? 'FINISH SCREEN RECORD' : 'SELECT SCREEN TO RECORD'}
-            </button>
-          </div>
-
-          {recordedVideoUrl && (
-            <div className="p-4 bg-deck-bg border border-arcade-coral space-y-3">
-              <video controls src={recordedVideoUrl} className="w-full max-h-60 rounded border border-black" />
-              <a
-                href={recordedVideoUrl}
-                download={`screen_capture_${Date.now()}.webm`}
-                className="btn-pixel btn-pixel-coral px-4 py-2 font-pixel text-[9px] inline-flex items-center gap-2"
-              >
-                <Download className="w-3.5 h-3.5" /> DOWNLOAD WEBM VIDEO
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. 8-BIT SYNTHESIZER */}
+      {/* 1. 8-BIT SYNTHESIZER */}
       {activeTab === 'synth' && (
-        <div className="max-w-2xl mx-auto pixel-card bg-deck-dark p-6 space-y-5 border border-deck-border font-mono text-xs text-center">
+        <div className="w-full max-w-4xl mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-5 border border-deck-border font-mono text-xs text-center">
           <div className="flex flex-wrap justify-between items-center border-b border-deck-border pb-3 gap-2">
             <span className="font-pixel text-xs text-arcade-cyan">CHIPTUNE SYNTHESIZER</span>
 
             {/* Waveform Selector */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               {['square', 'sawtooth', 'triangle', 'sine'].map(w => (
                 <button
                   key={w}
                   onClick={() => setSynthWave(w)}
                   className={`px-2 py-1 font-pixel text-[8px] uppercase border ${
-                    synthWave === w ? 'bg-deck-surface border-arcade-cyan text-arcade-cyan' : 'bg-deck-bg border-deck-border text-arcade-muted'
+                    synthWave === w ? 'bg-deck-surface border-arcade-cyan text-arcade-cyan font-bold' : 'bg-deck-bg border-deck-border text-arcade-muted'
                   }`}
                 >
                   {w}
@@ -511,7 +266,7 @@ export default function MediaTools() {
           </div>
 
           {/* Piano Keys */}
-          <div className="relative flex justify-center py-4 select-none overflow-x-auto no-scrollbar">
+          <div className="relative flex justify-center py-4 select-none overflow-x-auto no-scrollbar touch-scroll">
             <div className="flex bg-black p-2 border-4 border-black shadow-pixel-lg">
               {NOTES.map((note) => {
                 if (note.isBlack) {
@@ -519,7 +274,7 @@ export default function MediaTools() {
                     <button
                       key={note.name}
                       onClick={() => playTone(note.freq)}
-                      className="w-8 h-24 bg-black text-white hover:bg-slate-700 active:bg-arcade-cyan active:text-black border border-slate-700 -mx-4 z-10 flex flex-col justify-end pb-2 font-pixel text-[8px] shadow-md transition-colors"
+                      className="w-7 sm:w-8 h-20 sm:h-24 bg-black text-white hover:bg-slate-700 active:bg-arcade-cyan active:text-black border border-slate-700 -mx-3.5 sm:-mx-4 z-10 flex flex-col justify-end pb-2 font-pixel text-[7px] sm:text-[8px] shadow-md transition-colors"
                     >
                       {note.name}
                     </button>
@@ -529,7 +284,7 @@ export default function MediaTools() {
                   <button
                     key={note.name}
                     onClick={() => playTone(note.freq)}
-                    className="w-12 h-36 bg-white hover:bg-slate-200 active:bg-arcade-emerald text-black border border-slate-400 flex flex-col justify-end pb-3 font-pixel text-[9px] shadow-inner transition-colors"
+                    className="w-10 sm:w-12 h-32 sm:h-36 bg-white hover:bg-slate-200 active:bg-arcade-emerald text-black border border-slate-400 flex flex-col justify-end pb-3 font-pixel text-[8px] sm:text-[9px] shadow-inner transition-colors"
                   >
                     <span>{note.name}</span>
                     <span className="text-[7px] text-slate-500 font-mono">[{note.key}]</span>
@@ -538,32 +293,14 @@ export default function MediaTools() {
               })}
             </div>
           </div>
-          <p className="text-arcade-muted text-[11px]">Click keys to synthesize 8-bit soundwaves directly through Web Audio.</p>
+          <p className="text-arcade-muted text-[11px]">Click or tap keys to synthesize 8-bit soundwaves directly through Web Audio.</p>
         </div>
       )}
 
-      {/* 4. SPECTRUM VISUALIZER */}
-      {activeTab === 'visualizer' && (
-        <div className="max-w-xl mx-auto pixel-card bg-deck-dark p-6 space-y-4 border border-deck-border font-mono text-xs text-center">
-          <span className="font-pixel text-xs text-arcade-emerald uppercase">REAL-TIME FFT AUDIO SPECTRUM</span>
-
-          <div className="border-2 border-black bg-deck-bg shadow-pixel">
-            <canvas ref={visCanvasRef} width={500} height={200} className="w-full h-48 block" />
-          </div>
-
-          <button
-            onClick={visActive ? stopVisualizer : startVisualizer}
-            className={`btn-pixel w-full py-2.5 font-pixel text-xs ${visActive ? 'btn-pixel-coral' : 'btn-pixel-emerald'}`}
-          >
-            {visActive ? 'STOP LIVE SPECTRUM' : 'START LIVE MICROPHONE SPECTRUM'}
-          </button>
-        </div>
-      )}
-
-      {/* 5. COLOR PALETTE */}
+      {/* 2. COLOR PALETTE */}
       {activeTab === 'palette' && (
-        <div className="max-w-xl mx-auto pixel-card bg-deck-dark p-6 space-y-5 border border-deck-border font-mono text-xs">
-          <div className="flex justify-between items-center border-b border-deck-border pb-3">
+        <div className="w-full max-w-4xl mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-5 border border-deck-border font-mono text-xs">
+          <div className="flex justify-between items-center border-b border-deck-border pb-3 flex-wrap gap-2">
             <span className="font-pixel text-xs text-arcade-amber uppercase">COLOR PALETTE & EYEDROPPER</span>
             <div className="flex gap-2">
               <button
@@ -594,12 +331,12 @@ export default function MediaTools() {
           )}
 
           {/* Palette display */}
-          <div className="grid grid-cols-5 gap-2 h-36">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 h-48 sm:h-36">
             {palette.map((c, idx) => (
               <div
                 key={idx}
                 onClick={() => copyText(c)}
-                className="h-full border-2 border-black shadow-pixel cursor-pointer flex flex-col justify-end p-2 transition-transform hover:scale-105"
+                className="h-full border-2 border-black shadow-pixel cursor-pointer flex flex-col justify-end p-2 transition-transform hover:scale-105 active:scale-95"
                 style={{ backgroundColor: c }}
               >
                 <span className="bg-black/80 text-white font-mono text-[9px] px-1 py-0.5 text-center truncate">
@@ -608,13 +345,13 @@ export default function MediaTools() {
               </div>
             ))}
           </div>
-          <p className="text-center text-arcade-muted text-[10px]">Click any color block above to copy hex code to clipboard.</p>
+          <p className="text-center text-arcade-muted text-[10px]">Click or tap any color block above to copy hex code to clipboard.</p>
         </div>
       )}
 
-      {/* 6. VIDEO FRAME GRAB */}
+      {/* 3. VIDEO FRAME GRAB */}
       {activeTab === 'videograb' && (
-        <div className="max-w-xl mx-auto pixel-card bg-deck-dark p-6 space-y-4 border border-deck-border font-mono text-xs">
+        <div className="w-full max-w-4xl mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-4 border border-deck-border font-mono text-xs">
           <span className="font-pixel text-xs text-arcade-blue uppercase">PRECISE VIDEO FRAME GRABBER</span>
 
           {!videoFileUrl ? (
@@ -625,7 +362,7 @@ export default function MediaTools() {
             </label>
           ) : (
             <div className="space-y-4">
-              <video ref={videoElemRef} src={videoFileUrl} controls className="w-full max-h-64 border border-black bg-black rounded" />
+              <video ref={videoElemRef} src={videoFileUrl} controls className="w-full max-h-72 border border-black bg-black rounded" />
               <div className="flex gap-2">
                 <button
                   onClick={captureFrame}
@@ -643,7 +380,7 @@ export default function MediaTools() {
 
               {capturedFrameUrl && (
                 <div className="p-3 bg-deck-bg border border-arcade-blue space-y-2 text-center">
-                  <img src={capturedFrameUrl} alt="Captured" className="max-h-48 mx-auto border border-black shadow-md" />
+                  <img src={capturedFrameUrl} alt="Captured" className="max-h-56 mx-auto border border-black shadow-md" />
                   <a
                     href={capturedFrameUrl}
                     download={`frame_${Date.now()}.png`}
@@ -658,9 +395,9 @@ export default function MediaTools() {
         </div>
       )}
 
-      {/* 7. BPM METRONOME */}
+      {/* 4. BPM METRONOME */}
       {activeTab === 'metronome' && (
-        <div className="max-w-md mx-auto pixel-card bg-deck-dark p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
+        <div className="w-full max-w-2xl mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-6 border border-deck-border font-mono text-xs text-center">
           <span className="font-pixel text-xs text-arcade-purple uppercase">PRECISION BPM METRONOME</span>
 
           <div className="py-6 bg-deck-bg border-2 border-black shadow-pixel">
@@ -711,9 +448,9 @@ export default function MediaTools() {
         </div>
       )}
 
-      {/* 8. DRAWING BOARD */}
+      {/* 5. DRAWING BOARD */}
       {activeTab === 'drawing' && (
-        <div className="pixel-card bg-deck-dark p-6 space-y-4 border border-deck-border font-mono text-xs">
+        <div className="w-full max-w-4xl mx-auto pixel-card bg-deck-dark p-4 sm:p-6 space-y-4 border border-deck-border font-mono text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-deck-border pb-3">
             <span className="font-pixel text-xs text-arcade-emerald">CYBER PIXEL DRAWING CANVAS</span>
 

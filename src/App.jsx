@@ -7,9 +7,6 @@ import CreditsModal from './components/CreditsModal';
 import QuickSearchModal from './components/QuickSearchModal';
 
 // Tools
-import UniversalDownloader from './tools/downloader/UniversalDownloader';
-import SafeUrlChecker from './tools/urlChecker/SafeUrlChecker';
-import ShttpsHost from './tools/shttps/ShttpsHost';
 import ImageToolbox from './tools/imageToolbox/ImageToolbox';
 import PdfSuite from './tools/pdfSuite/PdfSuite';
 import DateTimeTools from './tools/dateTime/DateTimeTools';
@@ -30,10 +27,6 @@ import { toggleAudio, playClick, playBeep } from './audio/soundEffects';
 
 // Catalog of searchable tools
 const ALL_TOOLS = [
-  { id: 'downloader_main', categoryId: 'downloader', category: 'DOWNLOADER', name: 'Universal Downloader (Seal Style)', description: 'Download 4K video/audio from YouTube, X, Instagram, TikTok with custom flags' },
-  { id: 'downloader_spotify', categoryId: 'downloader', category: 'DOWNLOADER', name: 'Spotify Music Stream Downloader', description: 'Search & download high-bitrate music tracks and playlists with cover art' },
-  { id: 'url_checker', categoryId: 'urlChecker', category: 'URL CHECKER', name: 'Safe URL Checker & Unshortener', description: 'Trace redirect hops, inspect SSL certs, evaluate phishing threats & clean tracking' },
-  { id: 'shttps_server', categoryId: 'shttps', category: 'LOCAL SHTTPS', name: 'Local HTTPS/HTTP Server Host', description: 'Spawn local SSL/TLS servers, browse folders, upload files, LAN mobile QR code' },
   { id: 'image_compress', categoryId: 'imageToolbox', category: 'IMAGE STUDIO', name: 'Image Compressor & Converter', description: 'WebP, AVIF, JPEG, PNG optimizer with side-by-side comparison' },
   { id: 'image_pixel', categoryId: 'imageToolbox', category: 'IMAGE STUDIO', name: '8-Bit Pixel Art Generator', description: 'Convert images to authentic retro NES, GameBoy, and Cyberpunk pixel palettes' },
   { id: 'image_bg', categoryId: 'imageToolbox', category: 'IMAGE STUDIO', name: 'Background Remover & Alpha Eraser', description: 'Remove backgrounds and isolate silhouettes locally in browser' },
@@ -62,10 +55,17 @@ const ALL_TOOLS = [
   { id: 'ess_passgen', categoryId: 'essentials', category: 'ESSENTIALS', name: 'CSPRNG & Diceware Password Generator', description: 'Cryptographically secure password & memorable passphrase generator with entropy score' },
   { id: 'ess_qr', categoryId: 'essentials', category: 'ESSENTIALS', name: 'QR Code Generator', description: 'Generate high-contrast scannable QR codes for links and text' },
   { id: 'ess_notes', categoryId: 'essentials', category: 'ESSENTIALS', name: 'Autosave Quick Notes', description: 'Markdown scratchpad with word counter and local storage memory' },
-  { id: 'meas_ruler', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Calibrated Screen Ruler', description: 'On-screen caliper measurement in centimeters and inches' },
-  { id: 'meas_level', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: '2-Axis Spirit Level', description: 'Gyroscope and orientation bubble level indicator' },
+  { id: 'meas_ruler', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Calibrated Screen Ruler & Calipers', description: 'On-screen caliper measurement in centimeters, millimeters, and inches' },
+  { id: 'meas_protractor', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Interactive 180° Protractor', description: 'Measure angles with draggable touch arm and quick angle presets' },
   { id: 'meas_speed', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Authentic Internet Bandwidth Benchmark', description: 'Real packet ping/jitter, live chunk download Mbps and binary upload speed test' },
-  { id: 'meas_decibel', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Acoustic Decibel Sound Meter', description: 'Real microphone sound pressure and dB noise level monitor' },
+  { id: 'meas_freq', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'Synthesized Frequency Generator', description: 'Audio tone oscillator with creature hearing range spectrum' },
+  { id: 'meas_bpm', categoryId: 'measurement', category: 'MEASURE & SENSORS', name: 'BPM Tempo Tapper', description: 'Tap in rhythm to calculate beats per minute tempo' },
+  { id: 'med_synth', categoryId: 'media', category: 'AUDIO & CANVAS', name: '8-Bit Retro Synthesizer', description: 'Chiptune keyboard with multiple waveforms and octave control' },
+  { id: 'med_palette', categoryId: 'media', category: 'AUDIO & CANVAS', name: 'Color Palette & Eyedropper', description: 'Harmonious color schemes with hex copy and screen color picker' },
+  { id: 'med_draw', categoryId: 'media', category: 'AUDIO & CANVAS', name: 'Cyber Pixel Canvas', description: 'Touch-friendly drawing board with exportable PNG artwork' },
+  { id: 'med_videograb', categoryId: 'media', category: 'AUDIO & CANVAS', name: 'Video Frame Grabber', description: 'Extract crystal-clear frames from MP4/WebM video files' },
+  { id: 'med_metronome', categoryId: 'media', category: 'AUDIO & CANVAS', name: 'Precision BPM Metronome', description: 'Visual and acoustic metronome with adjustable tempos' },
+
   { id: 'txt_crypto', categoryId: 'textTools', category: 'TEXT & CRYPTO', name: 'AES-256 Text Encryption', description: 'Cryptographic encryption and decryption with custom secret key' },
   { id: 'txt_markdown', categoryId: 'textTools', category: 'TEXT & CRYPTO', name: 'Markdown Live Previewer', description: 'Split-screen live Markdown editor with instant HTML formatting' },
   { id: 'txt_base64', categoryId: 'textTools', category: 'TEXT & CRYPTO', name: 'File & Image to Base64', description: 'Encode any file or image into clean Base64 data URI string' },
@@ -97,13 +97,13 @@ const ALL_TOOLS = [
 ];
 
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState('downloader');
+  const [activeCategory, setActiveCategory] = useState('essentials');
   const [scanlines, setScanlines] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('omnideck_theme') || 'dark');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
-  const [viewportSimulation, setViewportSimulation] = useState('full'); // 'full' | 'mobile' | 'tablet'
+
 
   // Sync theme with body element & localStorage
   useEffect(() => {
@@ -153,8 +153,6 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCredits={() => setIsCreditsOpen(true)}
         activeCategory={activeCategory}
-        viewportSimulation={viewportSimulation}
-        setViewportSimulation={setViewportSimulation}
       />
 
       {/* Category Pills Navigation */}
@@ -164,49 +162,8 @@ export default function App() {
       />
 
       {/* Dynamic Content Viewport */}
-      <main className={`flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 md:p-6 space-y-4 sm:space-y-6 transition-all duration-300 ${
-        viewportSimulation === 'mobile' ? 'viewport-simulate-mobile' : viewportSimulation === 'tablet' ? 'viewport-simulate-tablet' : ''
-      }`}>
-        <ErrorBoundary onResetToHome={() => setActiveCategory('downloader')}>
-        {/* 1. UNIVERSAL DOWNLOADER */}
-        {activeCategory === 'downloader' && (
-          <ToolWrapper
-            categoryId="downloader"
-            category="UNIVERSAL DOWNLOADER"
-            title="SEAL & SPOTIFY STREAM ARCHIVER"
-            description="Download pristine 4K video, audio extractions, and Spotify playlists with SponsorBlock & ID3 metadata embedding."
-            badge="SEAL // SPOTDL"
-          >
-            <UniversalDownloader />
-          </ToolWrapper>
-        )}
-
-        {/* 2. SAFE URL CHECKER */}
-        {activeCategory === 'urlChecker' && (
-          <ToolWrapper
-            categoryId="urlChecker"
-            category="CYBER SECURITY"
-            title="SAFE URL AUDIT & UNSHORTENER"
-            description="Trace redirect hops, analyze SSL certificates, verify DNS records, and strip surveillance trackers."
-            badge="THREAT AUDITOR"
-          >
-            <SafeUrlChecker />
-          </ToolWrapper>
-        )}
-
-        {/* 3. SHTTPS LOCAL SERVER */}
-        {activeCategory === 'shttps' && (
-          <ToolWrapper
-            categoryId="shttps"
-            category="LOCAL INFRASTRUCTURE"
-            title="SHTTPS // LOCAL SSL/TLS SERVER DECK"
-            description="Spawn secure HTTPS or HTTP servers on any local port with auto-generated certificates and mobile LAN QR access."
-            badge="SHTTPS CORE"
-          >
-            <ShttpsHost />
-          </ToolWrapper>
-        )}
-
+      <main className="flex-1 w-full px-2 sm:px-3 md:px-4 space-y-3 sm:space-y-4">
+        <ErrorBoundary onResetToHome={() => setActiveCategory('essentials')}>
         {/* 4. IMAGE STUDIO (T8RIN) */}
         {activeCategory === 'imageToolbox' && (
           <ToolWrapper
@@ -289,10 +246,10 @@ export default function App() {
         {activeCategory === 'measurement' && (
           <ToolWrapper
             categoryId="measurement"
-            category="HARDWARE SENSORS"
+            category="MEASURE & SENSORS"
             title="MEASUREMENT & INSTRUMENTATION"
-            description="Calibrated screen ruler, 180° protractor, spirit bubble level, internet speedometer, decibel meter, and audio oscillator."
-            badge="SENSORS"
+            description="Calibrated screen ruler with touch calipers, 180° protractor, internet speed benchmark, frequency generator, and BPM tapper."
+            badge="MEASURE"
           >
             <MeasurementTools />
           </ToolWrapper>
@@ -316,9 +273,9 @@ export default function App() {
           <ToolWrapper
             categoryId="media"
             category="AUDIO & CANVAS"
-            title="MEDIA CREATION & RECORDING STUDIO"
-            description="Direct microphone WAV audio recorder and cyber pixel drawing board with palette controls."
-            badge="MEDIA"
+            title="AUDIO SYNTH & CREATIVE STUDIO"
+            description="8-bit chiptune synthesizer, pixel canvas drawing board, color palette generator, video frame grabber, and BPM metronome."
+            badge="CREATIVE"
           >
             <MediaTools />
           </ToolWrapper>
@@ -403,40 +360,6 @@ export default function App() {
         )}
         </ErrorBoundary>
       </main>
-
-      {/* Prominent Typographic Footer */}
-      <footer className="border-t-2 border-deck-border bg-deck-surface py-6 px-4 mt-12 font-mono text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-arcade-emerald border border-black flex items-center justify-center font-pixel text-[10px] text-black font-bold">
-              OD
-            </div>
-            <div>
-              <span className="font-pixel text-[10px]">
-                OMNI<span className="text-arcade-emerald">//</span>DECK CYBER-SUITE
-              </span>
-              <p className="text-[10px] text-arcade-muted">
-                130+ Integrated Offline-First Utilities & Tools Matrix
-              </p>
-            </div>
-          </div>
-
-          {/* Credits & Manifesto Trigger */}
-          <button
-            onClick={() => { playClick(); setIsCreditsOpen(true); }}
-            className="btn-pixel btn-pixel-amber px-4 py-2 font-pixel text-[10px] flex items-center gap-2 group cursor-pointer"
-          >
-            <span>SYSTEM CREDITS & MANIFESTO</span>
-          </button>
-
-          <div className="text-[10px] text-arcade-muted text-center md:text-right">
-            <span>PIXEL-MODERN TYPOGRAPHIC ARCHITECTURE</span>
-            <div className="text-arcade-emerald font-pixel text-[8px] mt-0.5">
-              ZERO PURPLE GRADIENTS // PURE FUNCTION
-            </div>
-          </div>
-        </div>
-      </footer>
 
       {/* Modals */}
       <CreditsModal isOpen={isCreditsOpen} onClose={() => setIsCreditsOpen(false)} />

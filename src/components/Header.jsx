@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Volume2, VolumeX, Monitor, Search, Sparkles, Terminal, 
-  Sun, Moon, Radio, Award, Smartphone, Tablet, Laptop
+  Sun, Moon, Radio, Award
 } from 'lucide-react';
 import { playClick, playBeep } from '../audio/soundEffects';
 import { useScreenProfile } from '../hooks/useScreenProfile';
@@ -15,9 +15,7 @@ export default function Header({
   setTheme,
   onOpenSearch, 
   onOpenCredits,
-  activeCategory,
-  viewportSimulation,
-  setViewportSimulation
+  activeCategory
 }) {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
   const screen = useScreenProfile();
@@ -52,34 +50,6 @@ export default function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Responsive Viewport Simulator (Desktop only) */}
-          {screen.isDesktop && setViewportSimulation && (
-            <div className="hidden lg:flex items-center gap-1 bg-deck-bg px-1.5 py-0.5 border border-deck-border text-[9px]">
-              <span className="text-[8px] text-arcade-muted mr-1">VIEW:</span>
-              <button
-                onClick={() => { playClick(); setViewportSimulation('mobile'); }}
-                className={`px-1 py-0.5 font-pixel text-[7px] border ${viewportSimulation === 'mobile' ? 'bg-arcade-emerald text-black border-black' : 'text-arcade-muted hover:text-white border-transparent'}`}
-                title="Simulate Mobile Viewport (390px)"
-              >
-                PHONE
-              </button>
-              <button
-                onClick={() => { playClick(); setViewportSimulation('tablet'); }}
-                className={`px-1 py-0.5 font-pixel text-[7px] border ${viewportSimulation === 'tablet' ? 'bg-arcade-cyan text-black border-black' : 'text-arcade-muted hover:text-white border-transparent'}`}
-                title="Simulate Tablet Viewport (820px)"
-              >
-                TABLET
-              </button>
-              <button
-                onClick={() => { playClick(); setViewportSimulation('full'); }}
-                className={`px-1 py-0.5 font-pixel text-[7px] border ${viewportSimulation === 'full' ? 'bg-arcade-amber text-black border-black' : 'text-arcade-muted hover:text-white border-transparent'}`}
-                title="Full Responsive Viewport"
-              >
-                AUTO
-              </button>
-            </div>
-          )}
-
           <span className="font-pixel text-[8px] sm:text-[9px] text-arcade-amber">{time}</span>
           <span className="hidden xs:inline text-deck-borderLight">|</span>
           <button 
@@ -93,7 +63,7 @@ export default function Header({
       </div>
 
       {/* Main Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="w-full mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand / Logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 via-rose-500 to-cyan-400 flex items-center justify-center border-2 border-black shadow-pixel-sm cursor-pointer hover:scale-105 transition-transform shrink-0"

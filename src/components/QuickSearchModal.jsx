@@ -95,7 +95,7 @@ export default function QuickSearchModal({ isOpen, onClose, tools, onSelectTool 
             <div className="p-8 text-center text-arcade-muted space-y-2">
               <Terminal className="w-8 h-8 mx-auto text-arcade-coral opacity-60" />
               <p className="font-pixel text-xs text-arcade-coral">NO TOOLS MATCHED QUERY</p>
-              <p className="text-[11px]">Try searching for "downloader", "image", "calculator", "speed", "games"</p>
+              <p className="text-[11px]">Try searching for "image", "calculator", "ruler", "speed", "games"</p>
             </div>
           ) : (
             filteredTools.map((tool, idx) => {
