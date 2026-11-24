@@ -220,10 +220,18 @@ export const CATEGORIES = [
   },
 ];
 
-export default function Navigation({ activeCategory, onSelectCategory }) {
+export default function Navigation({ 
+  activeCategory, 
+  onSelectCategory,
+  isGridOpen,
+  setIsGridOpen
+}) {
   const scrollContainerRef = useRef(null);
   const activeTabRef = useRef(null);
-  const [isGridOpen, setIsGridOpen] = useState(false);
+  const [localGridOpen, setLocalGridOpen] = useState(true);
+
+  const gridOpen = isGridOpen !== undefined ? isGridOpen : localGridOpen;
+  const setGridOpen = setIsGridOpen !== undefined ? setIsGridOpen : setLocalGridOpen;
 
   // Auto-scroll active category pill into center on selection
   useEffect(() => {
@@ -249,7 +257,7 @@ export default function Navigation({ activeCategory, onSelectCategory }) {
         <div className="w-full flex items-center">
           {/* Quick Mobile/Tablet Category Grid Opener */}
           <button
-            onClick={() => { playClick(); setIsGridOpen(true); }}
+            onClick={() => { playClick(); setGridOpen(true); }}
             className="px-2.5 sm:px-3 py-2 bg-deck-surface border-r border-deck-border text-arcade-paper hover:text-arcade-amber flex items-center gap-1.5 shrink-0 z-10 transition-colors"
             title="Open Complete Category Matrix Grid"
           >
@@ -321,18 +329,26 @@ export default function Navigation({ activeCategory, onSelectCategory }) {
       </nav>
 
       {/* Complete Category Grid Modal Drawer (Perfect for mobile & tablets) */}
-      {isGridOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+      {gridOpen && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              playClick();
+              setGridOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+        >
           <div className="pixel-card w-full max-w-3xl bg-deck-surface border-2 border-arcade-amber shadow-pixel-lg max-h-[90vh] flex flex-col">
             <div className="pixel-card-header bg-deck-dark border-b-2 border-arcade-amber/60 flex items-center justify-between p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <LayoutGrid className="w-5 h-5 text-arcade-amber" />
                 <span className="font-pixel text-xs sm:text-sm text-arcade-amber uppercase">
-                  COMPLETE CATEGORIES MATRIX (18 SUITES)
+                  COMPLETE CATEGORIES MATRIX ({CATEGORIES.length} SUITES)
                 </span>
               </div>
               <button
-                onClick={() => { playClick(); setIsGridOpen(false); }}
+                onClick={() => { playClick(); setGridOpen(false); }}
                 className="p-1 hover:bg-deck-surfaceHover text-arcade-muted hover:text-white border border-transparent hover:border-arcade-coral"
               >
                 <X className="w-5 h-5" />
@@ -350,7 +366,7 @@ export default function Navigation({ activeCategory, onSelectCategory }) {
                     onClick={() => {
                       playClick();
                       onSelectCategory(cat.id);
-                      setIsGridOpen(false);
+                      setGridOpen(false);
                     }}
                     style={isActive ? { borderColor: cat.hex } : {}}
                     className={`p-3 border text-left flex items-start gap-3 transition-all ${

@@ -45,35 +45,7 @@
   }
 }
 
-/* Scanlines overlay effect */
-.scanlines-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 9999;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
-  ), linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.03),
-    rgba(0, 255, 0, 0.01),
-    rgba(0, 255, 0, 0.03)
-  );
-  background-size: 100% 3px, 6px 100%;
-}
 
-body.light-theme .scanlines-overlay {
-  opacity: 0.2;
-  background: linear-gradient(
-    rgba(255, 255, 255, 0) 50%, 
-    rgba(0, 0, 0, 0.08) 50%
-  );
-  background-size: 100% 3px;
-}
 
 /* Pixel tactile button styling */
 .btn-pixel {

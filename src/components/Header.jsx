@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Volume2, VolumeX, Monitor, Search, Sparkles, Terminal, 
+  Volume2, VolumeX, Search, Sparkles, Terminal, 
   Sun, Moon, Radio, Award, Smartphone, Tablet, Laptop
 } from 'lucide-react';
 import { playClick, playBeep } from '../audio/soundEffects';
 import { useScreenProfile } from '../hooks/useScreenProfile';
 
 export default function Header({ 
-  scanlines, 
-  setScanlines, 
   soundEnabled, 
   setSoundEnabled, 
   theme, 
   setTheme,
   onOpenSearch, 
   onOpenCredits,
+  onOpenMatrix,
   activeCategory
 }) {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -65,14 +64,17 @@ export default function Header({
       {/* Main Bar */}
       <div className="w-full mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand / Logo */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 via-rose-500 to-cyan-400 flex items-center justify-center border-2 border-black shadow-pixel-sm cursor-pointer hover:scale-105 transition-transform shrink-0"
-               onClick={() => { playClick(); onOpenCredits(); }}>
+        <div 
+          className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer group"
+          onClick={() => { playClick(); onOpenMatrix ? onOpenMatrix() : onOpenCredits(); }}
+          title="Open Categories Matrix Hub"
+        >
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 via-rose-500 to-cyan-400 flex items-center justify-center border-2 border-black shadow-pixel-sm group-hover:scale-105 transition-transform shrink-0">
             <Terminal className="w-4 h-4 sm:w-6 sm:h-6 text-black" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="font-pixel text-sm sm:text-base md:text-lg tracking-tight text-white whitespace-nowrap">
+              <span className="font-pixel text-sm sm:text-base md:text-lg tracking-tight text-white whitespace-nowrap group-hover:text-arcade-amber transition-colors">
                 OMNI<span className="text-arcade-cyan">//</span><span className="text-arcade-amber">DECK</span>
               </span>
               <span className="hidden sm:inline-block font-mono text-[9px] uppercase px-1.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-400/50 font-bold">
@@ -141,22 +143,6 @@ export default function Header({
             title={soundEnabled ? "Mute 8-bit Audio" : "Enable 8-bit Audio"}
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-          </button>
-
-          {/* Scanlines Toggle */}
-          <button
-            onClick={() => {
-              playClick();
-              setScanlines(!scanlines);
-            }}
-            className={`p-1.5 sm:p-2 border transition-all flex items-center justify-center ${
-              scanlines 
-                ? 'bg-deck-surfaceHover border-arcade-cyan text-arcade-cyan shadow-pixel-sm' 
-                : 'bg-deck-bg border-deck-border text-arcade-muted'
-            }`}
-            title={scanlines ? "Turn Off CRT Scanlines" : "Turn On CRT Scanlines"}
-          >
-            <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
           {/* Credits / Manifesto Button */}

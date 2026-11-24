@@ -98,12 +98,11 @@ const ALL_TOOLS = [
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState('essentials');
-  const [scanlines, setScanlines] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('omnideck_theme') || 'dark');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
-
+  const [isMatrixOpen, setIsMatrixOpen] = useState(true); // Opens Complete Category Matrix Hub by default on load
 
   // Sync theme with body element & localStorage
   useEffect(() => {
@@ -139,19 +138,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-deck-bg text-slate-100 flex flex-col relative selection:bg-arcade-emerald selection:text-black">
-      {/* Optional CRT Scanlines Layer */}
-      {scanlines && <div className="scanlines-overlay" />}
-
       {/* Main Global Header */}
       <Header
-        scanlines={scanlines}
-        setScanlines={setScanlines}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
         theme={theme}
         setTheme={setTheme}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCredits={() => setIsCreditsOpen(true)}
+        onOpenMatrix={() => setIsMatrixOpen(true)}
         activeCategory={activeCategory}
       />
 
@@ -159,6 +154,8 @@ export default function App() {
       <Navigation
         activeCategory={activeCategory}
         onSelectCategory={(catId) => setActiveCategory(catId)}
+        isGridOpen={isMatrixOpen}
+        setIsGridOpen={setIsMatrixOpen}
       />
 
       {/* Dynamic Content Viewport */}
