@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Volume2, VolumeX, Monitor, Search, Sparkles, Terminal, 
-  Sun, Moon, Radio, Award
+  Sun, Moon, Radio, Award, Smartphone, Tablet, Laptop
 } from 'lucide-react';
 import { playClick, playBeep } from '../audio/soundEffects';
 import { useScreenProfile } from '../hooks/useScreenProfile';
