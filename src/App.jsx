@@ -97,7 +97,7 @@ const ALL_TOOLS = [
 ];
 
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState('essentials');
+  const [activeCategory, setActiveCategory] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('omnideck_theme') || 'dark');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -134,6 +134,7 @@ export default function App() {
 
   const handleSelectToolFromSearch = (tool) => {
     setActiveCategory(tool.categoryId);
+    setIsMatrixOpen(false);
   };
 
   return (
@@ -160,7 +161,28 @@ export default function App() {
 
       {/* Dynamic Content Viewport */}
       <main className="flex-1 w-full px-2 sm:px-3 md:px-4 space-y-3 sm:space-y-4">
-        <ErrorBoundary onResetToHome={() => setActiveCategory('essentials')}>
+        <ErrorBoundary onResetToHome={() => { setActiveCategory(null); setIsMatrixOpen(true); }}>
+        {/* Fallback state when no category is selected yet and matrix is dismissed */}
+        {!activeCategory && (
+          <div className="flex flex-col items-center justify-center min-h-[55vh] text-center p-6 border-2 border-dashed border-deck-border bg-deck-surface/40 my-6 max-w-2xl mx-auto animate-fadeIn">
+            <div className="w-14 h-14 bg-arcade-amber/10 border-2 border-arcade-amber/50 flex items-center justify-center mb-4 shadow-pixel-sm">
+              <span className="font-pixel text-arcade-amber text-xl">⚡</span>
+            </div>
+            <h2 className="font-pixel text-base sm:text-lg text-white mb-2">
+              OMNI//DECK READY // NO SUITE MOUNTED
+            </h2>
+            <p className="font-mono text-xs text-arcade-muted max-w-md mb-6 leading-relaxed">
+              Choose a utility suite from the navigation ribbon above or launch the Complete Categories Matrix.
+            </p>
+            <button
+              onClick={() => { playClick(); setIsMatrixOpen(true); }}
+              className="btn-pixel btn-pixel-amber px-5 py-2.5 font-pixel text-xs flex items-center gap-2"
+            >
+              <span>LAUNCH CATEGORIES MATRIX</span>
+            </button>
+          </div>
+        )}
+
         {/* 4. IMAGE STUDIO (T8RIN) */}
         {activeCategory === 'imageToolbox' && (
           <ToolWrapper
