@@ -5,8 +5,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin, playSuccess } from '../../audio/soundEffects';
 
-export default function HealthTools() {
-  const [activeTab, setActiveTab] = useState('breathe'); 
+export default function HealthTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'breathe'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'breathe' | 'water' | 'sleep' | 'eye' | 'bmi' | 'macros' | 'soundscape' | 'heartrate'
 
   // Helper for numeric inputs to eliminate "0653" bug

@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import { playClick, playSuccess, playCoin, playBeep } from '../../audio/soundEffects';
 
-export default function MediaTools() {
-  const [activeTab, setActiveTab] = useState('synth'); 
+export default function MediaTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'synth'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'synth' | 'palette' | 'videograb' | 'metronome' | 'drawing'
 
   const [copied, setCopied] = useState(false);

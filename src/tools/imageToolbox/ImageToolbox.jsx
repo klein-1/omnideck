@@ -13,8 +13,12 @@ const PALETTES = {
   cyberpunk: ['#080a0f', '#00ff88', '#00f0ff', '#ff0055', '#ffe600', '#a78bfa']
 };
 
-export default function ImageToolbox() {
-  const [activeSubTool, setActiveSubTool] = useState('compress');
+export default function ImageToolbox({ activeSubTool: propSubTool }) {
+  const [activeSubTool, setActiveSubTool] = useState(propSubTool || 'compress');
+
+  useEffect(() => {
+    if (propSubTool) setActiveSubTool(propSubTool);
+  }, [propSubTool]);
   // 'compress' | 'resize' | 'crop' | 'filter' | 'pixelate' | 'bgRemove' | 'exif' | 'watermark' | 'palette' | 'signature' | 'draw'
 
   const [sourceImage, setSourceImage] = useState(null);

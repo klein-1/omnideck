@@ -26,8 +26,12 @@ const CREATURES = [
   { name: 'Pigeon',   emoji: '🕊️', min: 200,  max: 10000  },
 ];
 
-export default function MeasurementTools() {
-  const [activeTab, setActiveTab] = useState('speedtest'); 
+export default function MeasurementTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'speedtest'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
 
   // ══════════════════════════════════════════════════════════════════
   // 1. REAL GENUINE INTERNET SPEED TEST ENGINE (unchanged)

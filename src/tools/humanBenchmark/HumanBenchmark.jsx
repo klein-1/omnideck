@@ -5,8 +5,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin, playError, playSuccess } from '../../audio/soundEffects';
 
-export default function HumanBenchmark() {
-  const [activeTab, setActiveTab] = useState('reaction'); 
+export default function HumanBenchmark({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'reaction'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'reaction' | 'aim' | 'chimp' | 'typing' | 'visual' | 'number' | 'verbal' | 'stroop'
 
   // 1. REACTION TIME TEST

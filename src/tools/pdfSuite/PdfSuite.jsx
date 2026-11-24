@@ -6,8 +6,12 @@ import {
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { playClick, playSuccess, playError } from '../../audio/soundEffects';
 
-export default function PdfSuite() {
-  const [activeTab, setActiveTab] = useState('merge'); // 'merge' | 'split' | 'rotate' | 'watermark' | 'imgToPdf'
+export default function PdfSuite({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'merge'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); // 'merge' | 'split' | 'rotate' | 'watermark' | 'imgToPdf'
   const [pdfFiles, setPdfFiles] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [resultPdfUrl, setResultPdfUrl] = useState(null);

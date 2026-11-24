@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin, playSuccess } from '../../audio/soundEffects';
 
-export default function DeviceInfoTools() {
-  const [activeTab, setActiveTab] = useState('specs');
+export default function DeviceInfoTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'specs');
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]);
   // 'specs' | 'fps' | 'audiochannel' | 'keyboard' | 'storage' | 'cleaner' | 'deadpixel'
 
   // 1. HARDWARE SPECS

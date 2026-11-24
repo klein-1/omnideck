@@ -6,8 +6,12 @@ import {
 import QRCode from 'qrcode';
 import { playClick, playCoin, playSuccess } from '../../audio/soundEffects';
 
-export default function SocialTools() {
-  const [activeTab, setActiveTab] = useState('ogpreview'); 
+export default function SocialTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'ogpreview'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'ogpreview' | 'utm' | 'counter' | 'biolink' | 'hashtags' | 'sizes' | 'wifi' | 'captions'
 
   const [copied, setCopied] = useState(false);

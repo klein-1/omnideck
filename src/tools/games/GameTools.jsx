@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin, playError, playSuccess } from '../../audio/soundEffects';
 
-export default function GameTools() {
-  const [activeTab, setActiveTab] = useState('snake'); 
+export default function GameTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'snake'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'snake' | 'minesweeper' | 'memory' | 'quiz' | 'tictactoe' | 'cointoss' | 'dice'
 
   // 1. RETRO SNAKE ARCADE

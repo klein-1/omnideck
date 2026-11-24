@@ -5,8 +5,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin } from '../../audio/soundEffects';
 
-export default function DateTimeTools() {
-  const [activeTab, setActiveTab] = useState('clocks'); 
+export default function DateTimeTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'clocks'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'clocks' | 'epoch' | 'stopwatch' | 'pomodoro' | 'tally' | 'zones' | 'datediff'
 
   // Live time for clocks

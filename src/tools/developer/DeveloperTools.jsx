@@ -6,8 +6,12 @@ import {
 import CryptoJS from 'crypto-js';
 import { playClick, playSuccess, playError, playCoin } from '../../audio/soundEffects';
 
-export default function DeveloperTools() {
-  const [activeTab, setActiveTab] = useState('code');
+export default function DeveloperTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'code');
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]);
   // 'code' | 'regex' | 'cssgen' | 'color' | 'curl' | 'json' | 'hash' | 'jwt' | 'dns'
 
   const [copied, setCopied] = useState(false);

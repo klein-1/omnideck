@@ -6,8 +6,12 @@ import {
 import QRCode from 'qrcode';
 import { playClick, playCoin } from '../../audio/soundEffects';
 
-export default function EssentialTools() {
-  const [activeTab, setActiveTab] = useState('flashlight'); 
+export default function EssentialTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'flashlight'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'flashlight' | 'passgen' | 'qr' | 'dictionary' | 'notes' | 'todo' | 'shopping'
 
   // 1. FLASHLIGHT STATE

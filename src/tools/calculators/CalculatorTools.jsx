@@ -5,8 +5,12 @@ import {
 } from 'lucide-react';
 import { playClick, playBeep, playCoin } from '../../audio/soundEffects';
 
-export default function CalculatorTools() {
-  const [activeTab, setActiveTab] = useState('scientific'); 
+export default function CalculatorTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'scientific'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'scientific' | 'units' | 'tip' | 'loan' | 'age' | 'bmi' | 'discount' | 'fuel' | 'electricity' | 'charts'
 
   // TIP & BILL SPLIT CALCULATOR

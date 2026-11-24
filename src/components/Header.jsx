@@ -94,7 +94,7 @@ export default function Header({
         >
           <Search className="w-4 h-4 text-arcade-muted group-hover:text-arcade-cyan transition-colors" />
           <span className="text-xs text-arcade-muted group-hover:text-white flex-1 font-mono truncate">
-            Search 130+ tools...
+            Search 90+ tools (e.g. protractor, speed, ruler)...
           </span>
           <kbd className="font-pixel text-[8px] bg-deck-surface border border-arcade-amber/60 px-1.5 py-0.5 text-arcade-amber shrink-0">
             CTRL+K

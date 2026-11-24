@@ -8,8 +8,12 @@ import CryptoJS from 'crypto-js';
 import * as diff from 'diff';
 import { playClick, playBeep, playCoin, playSuccess } from '../../audio/soundEffects';
 
-export default function TextTools() {
-  const [activeTab, setActiveTab] = useState('crypto');
+export default function TextTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'crypto');
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]);
   // 'crypto' | 'markdown' | 'base64file' | 'counter' | 'morse' | 'binary' | 'tts' | 'diff'
   // 'uuid' | 'lorem' | 'case' | 'urlcodec' | 'htmlentities' | 'rot13' | 'entropy'
 

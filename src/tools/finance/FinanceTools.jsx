@@ -21,8 +21,12 @@ const EXCHANGE_RATES = {
   NZD: 1.68
 };
 
-export default function FinanceTools() {
-  const [activeTab, setActiveTab] = useState('invoice'); 
+export default function FinanceTools({ activeTab: propTab }) {
+  const [activeTab, setActiveTab] = useState(propTab || 'invoice'); 
+
+  useEffect(() => {
+    if (propTab) setActiveTab(propTab);
+  }, [propTab]); 
   // 'invoice' | 'currency' | 'sip' | 'interest' | 'emi' | 'gst' | 'expenses'
 
   // 1. INVOICE GENERATOR STATE
